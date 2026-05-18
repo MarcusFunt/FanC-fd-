@@ -34,7 +34,10 @@ def generate_hub(fan: "FanConfig") -> trimesh.Trimesh:
     margin to the last stage position plus a small margin.
     """
     hub_r = fan.hub_radius_m
-    if not fan.stages:
+    if fan.duct is not None and fan.duct.enabled:
+        axial_start = 0.0
+        axial_end = fan.duct.total_length_m
+    elif not fan.stages:
         axial_start = 0.0
         axial_end = hub_r * 4.0
     else:
@@ -74,23 +77,43 @@ def generate_duct(fan: "FanConfig") -> trimesh.Trimesh | None:
     outer_r = inner_r + duct.wall_thickness_m
     length = duct.total_length_m
 
-    # Build hollow cylinder as outer - inner tubes with end caps
-    outer_cyl = trimesh.creation.cylinder(radius=outer_r, height=length, sections=128)
-    inner_cyl = trimesh.creation.cylinder(radius=inner_r, height=length + 1e-4, sections=128)
+    sections = 128
+    vertices: list[list[float]] = []
+    faces: list[list[int]] = []
 
-    # Boolean difference: outer - inner
-    try:
-        duct_mesh = outer_cyl.difference(inner_cyl)
-    except Exception:
-        # Fallback if boolean fails: just use outer cylinder
-        logger.warning("Boolean difference for duct failed; using solid outer cylinder")
-        duct_mesh = outer_cyl
+    for z in (0.0, length):
+        for radius in (outer_r, inner_r):
+            for i in range(sections):
+                theta = 2.0 * math.pi * i / sections
+                vertices.append([radius * math.cos(theta), radius * math.sin(theta), z])
 
-    # Position so duct spans from z=0 to z=length
-    T = trimesh.transformations.translation_matrix([0, 0, length / 2.0])
-    duct_mesh.apply_transform(T)
+    outer_bottom = 0
+    inner_bottom = sections
+    outer_top = 2 * sections
+    inner_top = 3 * sections
 
-    return duct_mesh
+    for i in range(sections):
+        j = (i + 1) % sections
+
+        # Outer cylindrical wall.
+        faces.append([outer_bottom + i, outer_bottom + j, outer_top + i])
+        faces.append([outer_bottom + j, outer_top + j, outer_top + i])
+
+        # Inner cylindrical wall, wound in the opposite direction.
+        faces.append([inner_bottom + i, inner_top + i, inner_bottom + j])
+        faces.append([inner_bottom + j, inner_top + i, inner_top + j])
+
+        # Inlet and outlet annular end caps.
+        faces.append([outer_bottom + i, inner_bottom + i, outer_bottom + j])
+        faces.append([outer_bottom + j, inner_bottom + i, inner_bottom + j])
+        faces.append([outer_top + i, outer_top + j, inner_top + i])
+        faces.append([outer_top + j, inner_top + j, inner_top + i])
+
+    return trimesh.Trimesh(
+        vertices=np.array(vertices, dtype=float),
+        faces=np.array(faces, dtype=np.int32),
+        process=True,
+    )
 
 
 # ---------------------------------------------------------------------------

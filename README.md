@@ -73,7 +73,11 @@ python scripts/postprocess_case.py \
     --case runs/my_first_fan/openfoam \
     --config configs/example_single_stage_rotor.yaml
 
-# 4. Run optimization (20 random trials)
+# 4. Generate an HTML render screen for the assembly + CFD results
+python scripts/render_screen.py \
+    --run-dir runs/my_first_fan
+
+# 5. Run optimization (20 random trials)
 python scripts/optimize.py \
     --config configs/example_single_stage_rotor.yaml \
     --n-trials 20 \

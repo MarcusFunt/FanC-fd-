@@ -1,0 +1,58 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     |                                                 |
+|   \\  /    A nd           |                                                 |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+// Function objects included from controlDict
+
+    forces_rotor_1
+    {
+        type            forces;
+        libs            ("libforces.so");
+        patches         (rotor_1);
+        rho             rhoInf;
+        rhoInf          1.225;
+        CofR            (0 0 0.000000);
+        writeControl    timeStep;
+        writeInterval   1;
+    }
+
+    pressureRise
+    {
+        type            surfaceFieldValue;
+        libs            ("libfieldFunctionObjects.so");
+        fields          (p);
+        operation       areaAverage;
+        patch           outlet;
+        writeFields     no;
+        writeControl    timeStep;
+        writeInterval   10;
+    }
+
+    pressureInlet
+    {
+        type            surfaceFieldValue;
+        libs            ("libfieldFunctionObjects.so");
+        fields          (p);
+        operation       areaAverage;
+        patch           inlet;
+        writeFields     no;
+        writeControl    timeStep;
+        writeInterval   10;
+    }
+
+    flowRate
+    {
+        type            surfaceFieldValue;
+        libs            ("libfieldFunctionObjects.so");
+        fields          (phi);
+        operation       sum;
+        patch           inlet;
+        writeFields     no;
+        writeControl    timeStep;
+        writeInterval   10;
+    }
+
+// ************************************************************************* //

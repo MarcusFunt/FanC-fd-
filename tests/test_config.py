@@ -247,6 +247,7 @@ class TestLoadConfig:
             "example_rotor_stator.yaml",
             "example_multistage_axial.yaml",
             "example_turbomolecular_style.yaml",
+            "openfoam_smoke_test.yaml",
         ],
     )
     def test_load_example_config(self, filename):

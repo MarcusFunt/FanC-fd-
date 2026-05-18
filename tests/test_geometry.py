@@ -19,7 +19,7 @@ from fan_cfd.config import (
     StageConfig,
     StageType,
 )
-from fan_cfd.geometry.assembly_geometry import generate_full_assembly, generate_hub
+from fan_cfd.geometry.assembly_geometry import generate_duct, generate_full_assembly, generate_hub
 from fan_cfd.geometry.cad_export import export_stl_files, validate_stl_files
 from fan_cfd.geometry.stage_geometry import generate_stage_geometry
 
@@ -132,6 +132,53 @@ class TestHubGeometry:
         c = hub.centroid
         assert abs(c[0]) < 1e-6
         assert abs(c[1]) < 1e-6
+
+    def test_ducted_hub_stays_inside_duct_length(self):
+        fan = _make_simple_fan()
+        fan.duct = DuctConfig(
+            enabled=True,
+            inner_diameter_m=0.122,
+            wall_thickness_m=0.003,
+            total_length_m=0.080,
+            inlet_clearance_m=0.010,
+            outlet_clearance_m=0.010,
+        )
+        hub = generate_hub(fan)
+        z_min, z_max = hub.bounds[:, 2]
+        assert z_min == pytest.approx(0.0)
+        assert z_max == pytest.approx(0.080)
+
+
+class TestDuctGeometry:
+    def test_duct_is_hollow_annulus(self):
+        fan = FanConfig(
+            name="ducted",
+            max_diameter_m=0.12,
+            hub_diameter_m=0.03,
+            rpm=5000.0,
+            duct=DuctConfig(
+                enabled=True,
+                inner_diameter_m=0.122,
+                wall_thickness_m=0.003,
+                total_length_m=0.08,
+                inlet_clearance_m=0.01,
+                outlet_clearance_m=0.01,
+            ),
+            stages=[
+                StageConfig(
+                    name="rotor_1",
+                    type=StageType.ROTOR,
+                    axial_position_m=0.02,
+                    blade_count=5,
+                    rpm=5000.0,
+                    blade=BladeConfig(),
+                )
+            ],
+        )
+        duct = generate_duct(fan)
+        radii = np.linalg.norm(duct.vertices[:, :2], axis=1)
+        assert radii.min() == pytest.approx(0.061)
+        assert radii.max() == pytest.approx(0.064)
 
 
 # ---------------------------------------------------------------------------

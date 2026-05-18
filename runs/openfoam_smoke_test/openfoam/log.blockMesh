@@ -1,0 +1,73 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 13-441953dfbb42
+Exec   : blockMesh
+Date   : May 18 2026
+Time   : 12:40:33
+Host   : "MarcusLaptop"
+PID    : 1530
+I/O    : uncollated
+Case   : /mnt/c/Users/marcu/Documents/GitHub/FanC(fd)/runs/openfoam_smoke_test/openfoam
+nProcs : 1
+sigFpe : Enabling floating point exception trapping (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 10)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+Create time
+
+Reading "blockMeshDict"
+
+Creating block mesh from
+    "system/blockMeshDict"
+Creating block edges
+No non-planar block faces defined
+Creating topology blocks
+Creating topology patches
+
+Creating block mesh topology
+
+Basic statistics
+    Number of internal faces : 0
+    Number of boundary faces : 6
+    Number of defined boundary faces : 6
+    Number of undefined boundary faces : 0
+
+Checking topology
+Creating block offsets
+Creating merge list .
+
+Creating polyMesh from blockMesh
+Creating patches
+Creating cells
+Creating points with scale 1
+    Block 0 cell size :
+        i : 0.012307692
+        j : 0.012307692 .. 0.012307692
+        k : 0.012173913 .. 0.012173913
+
+No patch pairs to merge
+
+Writing polyMesh
+----------------
+Mesh Information
+----------------
+  boundingBox: (-0.08 -0.08 -0.08) (0.08 0.08 0.2)
+  nPoints: 4704
+  nCells: 3887
+  nFaces: 12428
+  nInternalFaces: 10894
+----------------
+Patches
+----------------
+  patch 0 (start: 10894 size: 169) name: inlet
+  patch 1 (start: 11063 size: 169) name: outlet
+  patch 2 (start: 11232 size: 1196) name: sides
+
+End
+

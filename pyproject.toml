@@ -43,6 +43,7 @@ fan-generate = "scripts.generate_geometry:main"
 fan-run = "scripts.run_case:main"
 fan-optimize = "scripts.optimize:main"
 fan-postprocess = "scripts.postprocess_case:main"
+fan-render = "scripts.render_screen:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

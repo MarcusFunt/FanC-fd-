@@ -1,0 +1,82 @@
+# openfoam_smoke_test.yaml
+# ========================
+# Fast end-to-end OpenFOAM smoke test config.
+#
+# Purpose:
+# - Exercise geometry export, OpenFOAM case generation, snappyHexMesh,
+#   topoSet/MRF zone creation, checkMesh, simpleFoam, and postprocessing.
+# - Keep the mesh intentionally small enough for local CI/dev verification.
+#
+# This is not intended for physically meaningful fan performance numbers.
+
+fan:
+  name: openfoam_smoke_test
+  max_diameter_m: 0.080
+  hub_diameter_m: 0.020
+  rpm: 7000.0
+
+  stages:
+    - name: rotor_1
+      type: rotor
+      axial_position_m: 0.0
+      blade_count: 4
+      rpm: 7000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca4412
+        radial_sections: 7
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.018]
+            - [1.0, 0.012]
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 38.0]
+            - [1.0, 16.0]
+        thickness_scale: 1.0
+
+cfd:
+  solver: simpleFoam
+  rotation_model: MRF
+  turbulence_model: kOmegaSST
+
+  inlet:
+    patch_name: inlet
+    velocity_m_s: 3.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.080
+
+  outlet:
+    patch_name: outlet
+    velocity_m_s: 3.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.080
+
+  fluid:
+    nu_m2_s: 1.5e-5
+    rho_kg_m3: 1.225
+
+  mesh:
+    base_cell_size_m: 0.012
+    refinement_levels: 1
+    boundary_layers: 0
+    boundary_layer_expansion: 1.2
+    domain_length_factor: 2.0
+    n_processors: 2
+
+  run:
+    n_iterations: 30
+    write_interval: 10
+    convergence_residual: 1.0e-3
+    parallel: false
+    n_procs: 2
+    purge_write: 1
+
+objective:
+  mode: single
+  maximize: flow_rate
+  constraints:
+    max_non_ortho: 65.0
+    max_skewness: 4.0

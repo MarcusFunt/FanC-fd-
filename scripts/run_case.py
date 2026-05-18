@@ -25,6 +25,7 @@ from fan_cfd.multistage.stage_validation import validate_stage_sequence
 from fan_cfd.openfoam.case_builder import OpenFoamCaseBuilder
 from fan_cfd.openfoam.postprocess import PostProcessor
 from fan_cfd.openfoam.runner import OpenFoamRunner
+from fan_cfd.rendering import write_render_screen
 from fan_cfd.utils.logging_utils import get_logger
 
 logger = get_logger("fan-run")
@@ -45,6 +46,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-geometry", action="store_true", help="Skip geometry generation (reuse existing STLs).")
     parser.add_argument("--skip-mesh", action="store_true", help="Skip meshing (run solver on existing mesh).")
     parser.add_argument("--skip-solve", action="store_true", help="Skip solver (only mesh and postprocess).")
+    parser.add_argument("--skip-render", action="store_true", help="Skip HTML render screen generation.")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging.")
     return parser.parse_args()
 
@@ -148,6 +150,12 @@ def main() -> int:
         logger.info("  Torque:         %.4f N·m", perf.torque_nm)
         logger.info("  Shaft power:    %.1f W", perf.shaft_power_w)
         logger.info("  Efficiency:     %.2f %%", perf.efficiency * 100 if not __import__("math").isnan(perf.efficiency) else float("nan"))
+        if not args.skip_render:
+            try:
+                render_path = write_render_screen(base_dir, results_path=results_dir / "results.json")
+                logger.info("Render screen:   %s", render_path)
+            except Exception as exc:
+                logger.warning("Render screen generation failed: %s", exc)
     except Exception as exc:
         logger.error("Postprocessing failed: %s", exc)
         return 1
