@@ -10,12 +10,9 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from fan_cfd.geometry.blade_profiles import apply_profile_scale
-from fan_cfd.utils.logging_utils import get_logger
 
 if TYPE_CHECKING:
     from fan_cfd.config import Profile, StageConfig
-
-logger = get_logger(__name__)
 
 
 class AssemblyMode(str, Enum):
@@ -67,9 +64,14 @@ def resolve_inherited_profiles(stages: "list[StageConfig]") -> "list[StageConfig
     For each stage, if chord_profile or twist_profile_deg is of type INHERIT,
     look up the referenced stage's profile and create a scaled copy.
 
+    Inheritance chains are followed recursively, so a stage may inherit from
+    another stage that also inherits the same profile from a third stage.
+    Circular inheritance raises RuntimeError instead of returning an unresolved
+    profile or recursing forever.
+
     Returns a new list of stages with all profiles fully resolved (no INHERIT).
     """
-    from fan_cfd.config import ProfileType, StageConfig
+    from fan_cfd.config import StageConfig
 
     stage_map = {s.name: s for s in stages}
     resolved_stages: list[StageConfig] = []
@@ -123,14 +125,24 @@ def _resolve_one(
     profile_attr: str,
     stage: "StageConfig",
     stage_map: "dict[str, StageConfig]",
+    stack: "tuple[str, ...]" = (),
 ) -> "Profile":
-    """Resolve a single profile if it is of type INHERIT."""
+    """Resolve a single profile, following inheritance chains recursively."""
     from fan_cfd.config import ProfileType
 
     if profile.type != ProfileType.INHERIT:
         return profile
 
     src_name = profile.from_stage
+    if not src_name:
+        raise ValueError(
+            f"Stage '{stage.name}' has INHERIT profile '{profile_attr}' missing 'from_stage'"
+        )
+
+    if src_name in stack:
+        cycle = " -> ".join((*stack, src_name))
+        raise RuntimeError(f"Circular profile inheritance detected: {cycle}")
+
     src_stage = stage_map.get(src_name)
     if src_stage is None:
         raise ValueError(
@@ -138,20 +150,18 @@ def _resolve_one(
             f"referencing unknown stage '{src_name}'"
         )
 
-    # Get the source profile attribute
-    src_blade = src_stage.blade
-    src_profile = getattr(src_blade, profile_attr)
-
-    # Recursively resolve if source is also INHERIT (depth-limited)
-    if src_profile.type == ProfileType.INHERIT:
-        logger.warning(
-            "Stage '%s' inherits from '%s' which also uses INHERIT; "
-            "deep inheritance chains are not supported. Using source as-is.",
-            stage.name,
-            src_name,
+    src_profile = getattr(src_stage.blade, profile_attr)
+    if src_profile is None:
+        raise ValueError(
+            f"Stage '{stage.name}' has INHERIT profile '{profile_attr}' "
+            f"referencing stage '{src_name}', but that stage has no '{profile_attr}'"
         )
 
-    scale = profile.scale
-    if abs(scale - 1.0) < 1e-9:
-        return src_profile
-    return apply_profile_scale(src_profile, scale)
+    resolved_src = _resolve_one(
+        src_profile,
+        profile_attr,
+        src_stage,
+        stage_map,
+        (*stack, src_name),
+    )
+    return apply_profile_scale(resolved_src, profile.scale)

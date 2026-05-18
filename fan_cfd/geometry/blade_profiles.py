@@ -202,59 +202,21 @@ def interpolate_profile(profile: "Profile", r_normalized: float) -> float:
     if profile.type == ProfileType.INHERIT:
         raise RuntimeError(
             "Profile type INHERIT must be resolved before calling interpolate_profile. "
-            "Call resolve_inherited_profile() first."
+            "Call resolve_inherited_profiles() first."
         )
 
     raise ValueError(f"Unknown profile type: {profile.type}")
 
 
-def resolve_inherited_profile(
-    profile: "Profile", stages: "list[StageConfig]"
-) -> "Profile":
-    """
-    If *profile* is of type INHERIT, look up the referenced stage and return
-    a fully resolved (non-INHERIT) copy with the scale factor applied.
-
-    The referenced stage's profile is itself resolved recursively if needed.
-    """
-    from fan_cfd.config import Profile, ProfileType
-
-    if profile.type != ProfileType.INHERIT:
-        return profile
-
-    if not profile.from_stage:
-        raise ValueError("INHERIT profile missing 'from_stage'")
-
-    stage_map = {s.name: s for s in stages}
-    src_stage = stage_map.get(profile.from_stage)
-    if src_stage is None:
-        raise ValueError(
-            f"INHERIT profile references unknown stage '{profile.from_stage}'. "
-            f"Available: {list(stage_map.keys())}"
-        )
-
-    # We need to know which profile we're inheriting (chord vs twist).
-    # The caller is responsible for passing the correct base profile.
-    # Here we just resolve the profile object as given.
-    # The scale is applied to the 'value' or control-point values.
-    src_profile = profile  # fallback — caller must pass resolved source
-
-    # Build a resolved copy with scale applied
-    scale = profile.scale
-
-    if src_profile.type == ProfileType.CONSTANT:
-        return Profile(type=ProfileType.CONSTANT, value=src_profile.value * scale)
-
-    if src_profile.type in (ProfileType.LINEAR, ProfileType.CONTROL_POINTS):
-        new_points = [(r, v * scale) for r, v in src_profile.points]
-        return Profile(type=src_profile.type, points=new_points)
-
-    raise ValueError(f"Cannot inherit from profile of type {src_profile.type}")
-
-
 def apply_profile_scale(profile: "Profile", scale: float) -> "Profile":
     """Return a new Profile with all values multiplied by *scale*."""
     from fan_cfd.config import Profile, ProfileType
+
+    if profile.type == ProfileType.INHERIT:
+        raise RuntimeError(
+            "Cannot scale an unresolved INHERIT profile. "
+            "Call resolve_inherited_profiles() before scaling."
+        )
 
     if profile.type == ProfileType.CONSTANT:
         return Profile(type=ProfileType.CONSTANT, value=profile.value * scale)
@@ -263,4 +225,4 @@ def apply_profile_scale(profile: "Profile", scale: float) -> "Profile":
         new_points = [(r, v * scale) for r, v in profile.points]
         return Profile(type=profile.type, points=new_points)
 
-    return profile  # INHERIT — return as-is; caller handles
+    raise ValueError(f"Unknown profile type: {profile.type}")
