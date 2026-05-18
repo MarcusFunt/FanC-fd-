@@ -1,0 +1,80 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2206                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+Build  : _patch-v2206
+Arch   : "LSB;label=32;scalar=64"
+Exec   : checkMesh
+Date   : Nov 12 2024
+Time   : 14:23:41
+Host   : "workstation-1"
+PID    : 42381
+I/O    : uncollated
+Case   : /runs/ducted_rotor/openfoam
+nProcs : 1
+
+Create time
+
+Create polyMesh for time = 0
+
+Time = 0
+
+Mesh stats
+    points:           124835
+    internal points:  0
+    faces:            289410
+    internal faces:   243187
+    cells:            120340
+    faces per cell:   5.874
+    boundary patches: 6
+    point zones:      0
+    face zones:       0
+    cell zones:       2
+
+Overall number of cells of each type:
+    hexahedra:     93742
+    prisms:        14812
+    wedges:        0
+    pyramids:      0
+    tet wedges:    0
+    tetrahedra:    0
+    polyhedra:     11786
+
+Checking topology...
+    Boundary definition OK.
+    Cell to face addressing OK.
+    Point usage OK.
+    Upper triangular ordering OK.
+    Face vertices OK.
+    Number of regions: 1 (OK).
+
+Checking patch topology for multiply connected surfaces...
+    Patch              Faces    Points   Surface topology
+    inlet              384      420      ok (non-closed singly connected)
+    outlet             384      420      ok (non-closed singly connected)
+    sides              1536     1596     ok (non-closed singly connected)
+    hub_wall           2304     2418     ok (non-closed singly connected)
+    duct_wall          1152     1224     ok (non-closed singly connected)
+    rotor_1            23463    25890    ok (non-closed singly connected)
+
+Checking geometry...
+    Overall domain bounding box (-0.6 -0.6 -0.6) (0.6 0.6 1.5)
+    Mesh has 3 geometric (non-empty/wedge) directions (1 1 1)
+    Mesh has 3 solution (non-empty) directions (1 1 1)
+    Boundary openness (-2.1e-16 3.4e-17 1.8e-16) OK.
+    Max cell openness = 3.2e-15 OK.
+    Max aspect ratio = 12.4 OK.
+    Minimum face area = 3.8e-08. Maximum face area = 4.2e-05.  Face area magnitudes OK.
+    Min volume = 2.9e-11. Max volume = 8.1e-07. Total volume = 1.8375.  Cell volumes OK.
+    Mesh non-orthogonality Max: 41.23 average: 6.84
+    Non-orthogonality check OK.
+    Face pyramids OK.
+    Max skewness = 1.74 OK.
+    Coupled point location match (average 0) OK.
+
+Mesh OK.
+
+End

@@ -1,0 +1,46 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2206                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Template file — replaced by OpenFoamCaseBuilder.write_boundary_conditions()
+
+dimensions      [0 1 -1 0 0 0 0];
+
+internalField   uniform (0 0 {{INLET_VELOCITY}});
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform (0 0 {{INLET_VELOCITY}});
+    }
+
+    outlet
+    {
+        type            zeroGradient;
+    }
+
+    sides
+    {
+        type            slip;
+    }
+
+    "(hub_wall|duct_wall|rotor.*|stator.*)"
+    {
+        type            noSlip;
+    }
+}
+
+// ************************************************************************* //

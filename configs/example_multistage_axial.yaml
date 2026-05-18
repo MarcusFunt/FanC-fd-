@@ -1,0 +1,152 @@
+# example_multistage_axial.yaml
+# ==============================
+# Two-rotor / two-stator alternating axial fan, 180 mm total duct length.
+# Demonstrates inherited blade profiles: rotor_2 copies rotor_1's geometry
+# but scales all chord values by 0.9 (slightly shorter blades for stage 2).
+#
+# Stage layout (axial, left = inlet):
+#   [inlet] ── [R1 @ z=15mm] ── [S1 @ z=50mm] ── [R2 @ z=90mm] ── [S2 @ z=130mm] ── [outlet]
+#   Both rotors spin in the same direction (counter-rotating possible by
+#   setting rotation_direction: clockwise on rotor_2).
+
+fan:
+  name: multistage_axial
+  max_diameter_m: 0.150
+  hub_diameter_m: 0.040
+  rpm: 4500.0
+
+  duct:
+    enabled: true
+    inner_diameter_m: 0.152       # 1 mm tip clearance per side
+    wall_thickness_m: 0.004
+    total_length_m: 0.180
+    inlet_clearance_m: 0.012
+    outlet_clearance_m: 0.012
+
+  stages:
+    - name: rotor_1
+      type: rotor
+      axial_position_m: 0.015
+      blade_count: 6
+      rpm: 4500.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca4412
+        radial_sections: 11
+        chord_profile:
+          type: control_points
+          points:
+            - [0.0, 0.040]        # root: 40 mm chord
+            - [0.3, 0.036]
+            - [0.6, 0.030]
+            - [1.0, 0.024]        # tip:  24 mm chord
+        twist_profile_deg:
+          type: control_points
+          points:
+            - [0.0, 45.0]
+            - [0.4, 32.0]
+            - [0.8, 22.0]
+            - [1.0, 17.0]
+        thickness_scale: 1.0
+
+    - name: stator_1
+      type: stator
+      axial_position_m: 0.050
+      blade_count: 9
+      blade:
+        airfoil: naca0015
+        radial_sections: 9
+        chord_profile:
+          type: constant
+          value: 0.028
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -35.0]
+            - [1.0, -16.0]
+        thickness_scale: 0.9
+
+    - name: rotor_2
+      type: rotor
+      axial_position_m: 0.090
+      blade_count: 6
+      rpm: 4500.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca4412
+        radial_sections: 11
+        # Inherit rotor_1's chord profile, scaled down by 10%
+        chord_profile:
+          type: inherit
+          from_stage: rotor_1
+          scale: 0.9
+        # Inherit rotor_1's twist profile (same angles at stage 2)
+        twist_profile_deg:
+          type: inherit
+          from_stage: rotor_1
+          scale: 1.0
+        thickness_scale: 1.0
+
+    - name: stator_2
+      type: stator
+      axial_position_m: 0.130
+      blade_count: 9
+      blade:
+        airfoil: naca0015
+        radial_sections: 9
+        chord_profile:
+          type: constant
+          value: 0.025
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -30.0]
+            - [1.0, -14.0]
+        thickness_scale: 0.9
+
+cfd:
+  solver: simpleFoam
+  rotation_model: MRF
+  turbulence_model: kOmegaSST
+
+  inlet:
+    patch_name: inlet
+    velocity_m_s: 4.5
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.152
+
+  outlet:
+    patch_name: outlet
+    velocity_m_s: 4.5
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.152
+
+  fluid:
+    nu_m2_s: 1.5e-5
+    rho_kg_m3: 1.225
+
+  mesh:
+    base_cell_size_m: 0.006
+    refinement_levels: 3
+    boundary_layers: 5
+    boundary_layer_expansion: 1.2
+    domain_length_factor: 3.5
+    n_processors: 8
+
+  run:
+    n_iterations: 1000
+    write_interval: 100
+    convergence_residual: 1.0e-4
+    parallel: false
+    n_procs: 8
+    purge_write: 1
+
+objective:
+  mode: multi_objective
+  maximize: efficiency
+  weights:
+    efficiency: 0.6
+    pressure_rise: 0.4
+  constraints:
+    min_pressure_rise_pa: 30.0
+    min_flow_rate_m3_s: 0.02

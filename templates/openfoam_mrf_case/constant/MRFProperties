@@ -1,0 +1,30 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2206                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      MRFProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Template file — replaced by mrf_zones.write_mrf_properties()
+// Example single-rotor MRF zone shown below.
+
+rotor_1_MRF
+{
+    cellZone        rotor_1_zone;
+    active          yes;
+    nonRotatingPatches ( inlet outlet hub_wall duct_wall );
+    origin          (0 0 {{ROTOR_1_AXIAL_POS}});
+    axis            (0 0 1);
+    omega           {{OMEGA_RAD_S}};  // rad/s  ({{RPM}} RPM)
+}
+
+// ************************************************************************* //

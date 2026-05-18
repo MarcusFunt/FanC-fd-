@@ -1,0 +1,30 @@
+{
+  "case_dir": "/runs/ducted_rotor/openfoam",
+  "config_name": "ducted_rotor",
+  "flow_rate_m3_s": 0.034821,
+  "pressure_rise_pa": 47.23,
+  "torque_nm": 0.008341,
+  "per_stage_torque": {
+    "rotor_1": 0.008341
+  },
+  "shaft_power_w": 4.371,
+  "efficiency": 0.376,
+  "mesh": {
+    "max_non_ortho": 41.23,
+    "max_skewness": 1.74,
+    "n_cells": 120340,
+    "ok": true
+  },
+  "convergence": {
+    "converged": true,
+    "n_iterations": 500,
+    "final_residuals": {
+      "Ux": 1.234e-05,
+      "Uy": 1.091e-05,
+      "Uz": 1.341e-05,
+      "p": 2.812e-06,
+      "k": 8.123e-06,
+      "omega": 8.812e-06
+    }
+  }
+}

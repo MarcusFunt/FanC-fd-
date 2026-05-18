@@ -1,0 +1,75 @@
+# example_single_stage_rotor.yaml
+# ================================
+# Simple 5-blade rotor-only fan, 120 mm diameter, no duct, 5000 RPM.
+# Baseline configuration for rapid iteration.
+
+fan:
+  name: single_stage_rotor
+  max_diameter_m: 0.120          # 120 mm tip-to-tip
+  hub_diameter_m: 0.030          # 30 mm hub
+  rpm: 5000.0
+
+  stages:
+    - name: rotor_1
+      type: rotor
+      axial_position_m: 0.0
+      blade_count: 5
+      rpm: 5000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca4412
+        radial_sections: 9
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.030]      # root chord: 30 mm
+            - [1.0, 0.020]      # tip chord:  20 mm
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 42.0]       # root twist: 42°
+            - [1.0, 18.0]       # tip twist:  18°
+        thickness_scale: 1.0
+
+cfd:
+  solver: simpleFoam
+  rotation_model: MRF
+  turbulence_model: kOmegaSST
+
+  inlet:
+    patch_name: inlet
+    velocity_m_s: 5.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.12
+
+  outlet:
+    patch_name: outlet
+    velocity_m_s: 5.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.12
+
+  fluid:
+    nu_m2_s: 1.5e-5              # kinematic viscosity of air at 20°C
+    rho_kg_m3: 1.225
+
+  mesh:
+    base_cell_size_m: 0.005      # 5 mm base cells
+    refinement_levels: 3
+    boundary_layers: 5
+    boundary_layer_expansion: 1.2
+    domain_length_factor: 5.0
+    n_processors: 4
+
+  run:
+    n_iterations: 500
+    write_interval: 100
+    convergence_residual: 1.0e-4
+    parallel: false
+    n_procs: 4
+    purge_write: 1
+
+objective:
+  mode: single
+  maximize: efficiency
+  constraints:
+    min_pressure_rise_pa: 10.0   # require at least 10 Pa pressure rise

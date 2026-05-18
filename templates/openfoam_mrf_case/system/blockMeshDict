@@ -1,0 +1,74 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2206                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      blockMeshDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// Template file — replaced by dict_writer.write_block_mesh_dict()
+// Background box sized to {{DOMAIN_RADIUS}} m (= fan_tip_radius * domain_length_factor)
+
+scale   1;
+
+vertices
+(
+    (-{{DOMAIN_RADIUS}} -{{DOMAIN_RADIUS}} -{{DOMAIN_RADIUS}})   // 0
+    ( {{DOMAIN_RADIUS}} -{{DOMAIN_RADIUS}} -{{DOMAIN_RADIUS}})   // 1
+    ( {{DOMAIN_RADIUS}}  {{DOMAIN_RADIUS}} -{{DOMAIN_RADIUS}})   // 2
+    (-{{DOMAIN_RADIUS}}  {{DOMAIN_RADIUS}} -{{DOMAIN_RADIUS}})   // 3
+    (-{{DOMAIN_RADIUS}} -{{DOMAIN_RADIUS}}  {{DOMAIN_Z_MAX}})    // 4
+    ( {{DOMAIN_RADIUS}} -{{DOMAIN_RADIUS}}  {{DOMAIN_Z_MAX}})    // 5
+    ( {{DOMAIN_RADIUS}}  {{DOMAIN_RADIUS}}  {{DOMAIN_Z_MAX}})    // 6
+    (-{{DOMAIN_RADIUS}}  {{DOMAIN_RADIUS}}  {{DOMAIN_Z_MAX}})    // 7
+);
+
+blocks
+(
+    hex (0 1 2 3 4 5 6 7) ({{NX}} {{NY}} {{NZ}}) simpleGrading (1 1 1)
+);
+
+edges
+(
+);
+
+boundary
+(
+    inlet
+    {
+        type patch;
+        faces
+        (
+            (0 3 2 1)
+        );
+    }
+    outlet
+    {
+        type patch;
+        faces
+        (
+            (4 5 6 7)
+        );
+    }
+    sides
+    {
+        type patch;
+        faces
+        (
+            (0 1 5 4)
+            (1 2 6 5)
+            (2 3 7 6)
+            (3 0 4 7)
+        );
+    }
+);
+
+// ************************************************************************* //

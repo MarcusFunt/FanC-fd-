@@ -1,0 +1,76 @@
+# example_ducted_rotor.yaml
+# ==========================
+# Same 5-blade rotor as single_stage but enclosed in a duct.
+# Uses the OLD-style config format (no explicit 'stages:' block) to demonstrate
+# backward-compatibility conversion.  The loader will auto-generate a stages list.
+
+fan:
+  name: ducted_rotor
+  max_diameter_m: 0.120
+  hub_diameter_m: 0.030
+  rpm: 5000.0
+  blade_count: 5              # old-style: top-level blade_count
+  axial_position_m: 0.015     # old-style: single axial position
+
+  blade:                      # old-style: top-level blade block
+    airfoil: naca4412
+    radial_sections: 9
+    chord_profile:
+      type: linear
+      points:
+        - [0.0, 0.030]
+        - [1.0, 0.020]
+    twist_profile_deg:
+      type: linear
+      points:
+        - [0.0, 40.0]
+        - [1.0, 20.0]
+
+  duct:
+    enabled: true
+    inner_diameter_m: 0.122    # 1 mm tip clearance each side
+    wall_thickness_m: 0.003
+    total_length_m: 0.080      # 80 mm duct
+    inlet_clearance_m: 0.015
+    outlet_clearance_m: 0.015
+
+cfd:
+  solver: simpleFoam
+  rotation_model: MRF
+  turbulence_model: kOmegaSST
+
+  inlet:
+    patch_name: inlet
+    velocity_m_s: 5.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.122
+
+  outlet:
+    patch_name: outlet
+    velocity_m_s: 5.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.122
+
+  fluid:
+    nu_m2_s: 1.5e-5
+    rho_kg_m3: 1.225
+
+  mesh:
+    base_cell_size_m: 0.004
+    refinement_levels: 3
+    boundary_layers: 5
+    boundary_layer_expansion: 1.2
+    domain_length_factor: 4.0
+    n_processors: 4
+
+  run:
+    n_iterations: 600
+    write_interval: 100
+    convergence_residual: 1.0e-4
+    parallel: false
+    n_procs: 4
+    purge_write: 1
+
+objective:
+  mode: single
+  maximize: efficiency

@@ -1,0 +1,189 @@
+# example_turbomolecular_style.yaml
+# ====================================
+# Six alternating rotor/stator stages with short axial spacing and high blade angles.
+# Intended as a GEOMETRY DEMONSTRATION ONLY.
+#
+# ⚠ IMPORTANT CFD LIMITATIONS ⚠
+# ─────────────────────────────────────────────────────────────────────────────
+# Actual turbomolecular pumps (TMPs) operate at gas pressures of 10⁻³–10⁻⁷ Pa,
+# where the mean free path (λ) is comparable to or larger than geometric
+# features (Knudsen number Kn = λ/L >> 1).  At these conditions:
+#
+#   1. Navier-Stokes / RANS (continuum) equations are INVALID.
+#   2. OpenFOAM's simpleFoam/kOmegaSST assumes Kn << 1 (continuum flow).
+#   3. Correct modelling requires DSMC (Direct Simulation Monte Carlo),
+#      molecular dynamics, or dedicated rarefied-flow codes.
+#
+# This config will run through the geometry pipeline and generate STL files,
+# but the CFD results will be physically meaningless at TMP operating conditions.
+# It is retained here to:
+#   (a) demonstrate the geometry generation for many alternating stages, and
+#   (b) serve as a starting point if you run at near-atmospheric pressure
+#       (e.g. backing pump operating regime, p ≈ 1–100 Pa, Kn ≈ 0.001–0.1).
+#
+# For real TMP simulation: use dsmcFoam+, SPARTA, or MONACO/GRASP.
+# ─────────────────────────────────────────────────────────────────────────────
+
+fan:
+  name: turbomolecular_style
+  max_diameter_m: 0.200         # 200 mm (TMP scale)
+  hub_diameter_m: 0.040         # 40 mm hub
+  rpm: 30000.0                  # 30,000 RPM  (blade tip speed ~314 m/s)
+
+  duct:
+    enabled: true
+    inner_diameter_m: 0.202     # 1 mm clearance
+    wall_thickness_m: 0.005
+    total_length_m: 0.120       # 120 mm axial extent for 6 stages
+    inlet_clearance_m: 0.005
+    outlet_clearance_m: 0.005
+
+  stages:
+    - name: rotor_1
+      type: rotor
+      axial_position_m: 0.008
+      blade_count: 22
+      rpm: 30000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca0008        # thin, flat-plate-like
+        radial_sections: 7
+        chord_profile:
+          type: constant
+          value: 0.012           # 12 mm chord
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 60.0]       # high angle of attack for momentum transfer
+            - [1.0, 55.0]
+        thickness_scale: 0.6
+
+    - name: stator_1
+      type: stator
+      axial_position_m: 0.023
+      blade_count: 23
+      blade:
+        airfoil: naca0008
+        radial_sections: 7
+        chord_profile:
+          type: constant
+          value: 0.012
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -58.0]
+            - [1.0, -53.0]
+        thickness_scale: 0.6
+
+    - name: rotor_2
+      type: rotor
+      axial_position_m: 0.038
+      blade_count: 22
+      rpm: 30000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca0008
+        radial_sections: 7
+        chord_profile:
+          type: constant
+          value: 0.011
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 58.0]
+            - [1.0, 53.0]
+        thickness_scale: 0.6
+
+    - name: stator_2
+      type: stator
+      axial_position_m: 0.053
+      blade_count: 23
+      blade:
+        airfoil: naca0008
+        radial_sections: 7
+        chord_profile:
+          type: constant
+          value: 0.011
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -56.0]
+            - [1.0, -52.0]
+        thickness_scale: 0.6
+
+    - name: rotor_3
+      type: rotor
+      axial_position_m: 0.068
+      blade_count: 22
+      rpm: 30000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca0008
+        radial_sections: 7
+        chord_profile:
+          type: constant
+          value: 0.010
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 55.0]
+            - [1.0, 50.0]
+        thickness_scale: 0.6
+
+    - name: stator_3
+      type: stator
+      axial_position_m: 0.083
+      blade_count: 23
+      blade:
+        airfoil: naca0008
+        radial_sections: 7
+        chord_profile:
+          type: constant
+          value: 0.010
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -53.0]
+            - [1.0, -48.0]
+        thickness_scale: 0.6
+
+cfd:
+  solver: simpleFoam
+  rotation_model: MRF
+  turbulence_model: kOmegaSST   # INVALID at low Kn — see warnings above
+
+  inlet:
+    patch_name: inlet
+    velocity_m_s: 2.0            # molecular effusion velocity order-of-magnitude
+    turbulence_intensity: 0.03
+    hydraulic_diameter_m: 0.202
+
+  outlet:
+    patch_name: outlet
+    velocity_m_s: 2.0
+    turbulence_intensity: 0.03
+    hydraulic_diameter_m: 0.202
+
+  fluid:
+    nu_m2_s: 1.5e-5              # NOTE: at 10⁻³ Pa the effective viscosity
+    rho_kg_m3: 1.225             # and density are very different from this!
+
+  mesh:
+    base_cell_size_m: 0.005
+    refinement_levels: 3
+    boundary_layers: 4
+    boundary_layer_expansion: 1.2
+    domain_length_factor: 3.0
+    n_processors: 8
+
+  run:
+    n_iterations: 500
+    write_interval: 100
+    convergence_residual: 1.0e-4
+    parallel: false
+    n_procs: 8
+    purge_write: 1
+
+objective:
+  mode: single
+  maximize: pressure_rise

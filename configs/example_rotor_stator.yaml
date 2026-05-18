@@ -1,0 +1,105 @@
+# example_rotor_stator.yaml
+# ==========================
+# Ducted fan with one rotor stage followed by one stator stage.
+# The stator straightens the swirl imparted by the rotor, improving
+# total-to-static pressure recovery.
+#
+# Layout (axial, left = inlet):
+#   [inlet] ──── [rotor_1 @ z=0.015 m] ──── [stator_1 @ z=0.050 m] ──── [outlet]
+#                |←── duct (80 mm) ──────────────────────────────────────────|
+
+fan:
+  name: rotor_stator
+  max_diameter_m: 0.120
+  hub_diameter_m: 0.030
+  rpm: 5000.0
+
+  duct:
+    enabled: true
+    inner_diameter_m: 0.122
+    wall_thickness_m: 0.003
+    total_length_m: 0.080
+    inlet_clearance_m: 0.010
+    outlet_clearance_m: 0.010
+
+  stages:
+    - name: rotor_1
+      type: rotor
+      axial_position_m: 0.015
+      blade_count: 5
+      rpm: 5000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca4412
+        radial_sections: 9
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.030]
+            - [1.0, 0.022]
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 42.0]
+            - [1.0, 20.0]
+        thickness_scale: 1.0
+
+    - name: stator_1
+      type: stator
+      axial_position_m: 0.050
+      blade_count: 7              # typically more blades than rotor to de-swirl
+      blade:
+        airfoil: naca0012          # symmetric; no camber needed for stator
+        radial_sections: 7
+        chord_profile:
+          type: constant
+          value: 0.025             # 25 mm chord throughout
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -30.0]        # negative twist counters rotor exit swirl
+            - [1.0, -15.0]
+        thickness_scale: 0.8
+
+cfd:
+  solver: simpleFoam
+  rotation_model: MRF
+  turbulence_model: kOmegaSST
+
+  inlet:
+    patch_name: inlet
+    velocity_m_s: 5.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.122
+
+  outlet:
+    patch_name: outlet
+    velocity_m_s: 5.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.122
+
+  fluid:
+    nu_m2_s: 1.5e-5
+    rho_kg_m3: 1.225
+
+  mesh:
+    base_cell_size_m: 0.004
+    refinement_levels: 3
+    boundary_layers: 5
+    boundary_layer_expansion: 1.2
+    domain_length_factor: 4.0
+    n_processors: 4
+
+  run:
+    n_iterations: 800
+    write_interval: 100
+    convergence_residual: 1.0e-4
+    parallel: false
+    n_procs: 4
+    purge_write: 1
+
+objective:
+  mode: single
+  maximize: efficiency
+  constraints:
+    min_pressure_rise_pa: 15.0

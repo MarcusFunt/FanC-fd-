@@ -1,0 +1,49 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v2206                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      omega;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+// omega = epsilon / (Cmu * k)  where Cmu=0.09
+// Mixing length l = 0.07 * D_hydraulic
+
+dimensions      [0 0 -1 0 0 0 0];
+
+internalField   uniform {{OMEGA_INITIAL}};
+
+boundaryField
+{
+    inlet
+    {
+        type            turbulentMixingLengthFrequencyInlet;
+        mixingLength    {{MIXING_LENGTH}};
+        value           uniform {{OMEGA_INITIAL}};
+    }
+
+    outlet
+    {
+        type            zeroGradient;
+    }
+
+    sides
+    {
+        type            slip;
+    }
+
+    "(hub_wall|duct_wall|rotor.*|stator.*)"
+    {
+        type            omegaWallFunction;
+        value           uniform {{OMEGA_INITIAL}};
+    }
+}
+
+// ************************************************************************* //
