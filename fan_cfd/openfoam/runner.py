@@ -23,15 +23,15 @@ logger = get_logger(__name__)
 
 # Patterns that indicate solver divergence
 _DIVERGENCE_PATTERNS = [
-    r"FOAM FATAL ERROR",
+    r"FOAM FATAL (?:IO )?ERROR",
     r"FOAM exiting",
-    r"Floating point exception",
-    r"nan",
+    r"^Floating point exception",
+    r"\bnan\b",
     r"Too many iterations",
     r"Divergence detected",
 ]
 
-_DIVERGENCE_RE = re.compile("|".join(_DIVERGENCE_PATTERNS), re.IGNORECASE)
+_DIVERGENCE_RE = re.compile("|".join(_DIVERGENCE_PATTERNS), re.IGNORECASE | re.MULTILINE)
 
 
 # ---------------------------------------------------------------------------
@@ -132,12 +132,20 @@ class OpenFoamRunner:
             return result
 
         # 4. checkMesh
+        if (self.case_dir / "system" / "topoSetDict").exists():
+            logger.info("Running topoSet ...")
+            rc, _ = self.run_command(["topoSet"], "topoSet")
+            if rc != 0:
+                result.error_message = "topoSet failed"
+                return result
+
+        # 5. checkMesh
         logger.info("Running checkMesh ...")
         result.check_mesh = self.run_check_mesh()
         if not result.check_mesh.passed:
             logger.warning("checkMesh reported issues but continuing")
 
-        # 5. Decompose if parallel
+        # 6. Decompose if parallel
         if self.config.run.parallel:
             logger.info("Running decomposePar ...")
             rc, _ = self.run_command(["decomposePar"], "decomposePar")
@@ -145,7 +153,7 @@ class OpenFoamRunner:
                 result.error_message = "decomposePar failed"
                 return result
 
-        # 6. Solver
+        # 7. Solver
         logger.info("Running %s ...", self.config.solver)
         result.solver = self.run_solver()
         result.success = not result.solver.diverged
@@ -181,7 +189,7 @@ class OpenFoamRunner:
             ]
         else:
             cmd = [self.config.solver]
-        rc, log = self.run_command(cmd, f"log.{self.config.solver}")
+        rc, log = self.run_command(cmd, self.config.solver)
         elapsed = time.time() - t0
         return _parse_solver_log(log, elapsed)
 
@@ -272,7 +280,11 @@ def _parse_check_mesh_log(log: str) -> CheckMeshResult:
         result.n_faces = int(m.group(1))
 
     # Non-orthogonality
-    m = re.search(r"Max non-orthogonality\s*=\s*([\d.eE+\-]+)", log)
+    m = re.search(
+        r"(?:Max non-orthogonality\s*=\s*|Mesh non-orthogonality\s+Max:\s*)"
+        r"([\d.eE+\-]+)",
+        log,
+    )
     if m:
         result.max_non_ortho = float(m.group(1))
 
@@ -301,9 +313,9 @@ def _parse_solver_log(log: str, elapsed: float) -> SolverResult:
         return result
 
     # Count iterations
-    iter_matches = re.findall(r"^Time = (\d+)", log, re.MULTILINE)
+    iter_matches = re.findall(r"^Time = ([\d.]+)s?", log, re.MULTILINE)
     if iter_matches:
-        result.n_iterations = int(iter_matches[-1])
+        result.n_iterations = int(float(iter_matches[-1]))
 
     # Final residuals
     # OpenFOAM prints: "Solving for U, Initial residual = X, Final residual = Y, ..."

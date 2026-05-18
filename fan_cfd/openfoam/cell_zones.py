@@ -62,15 +62,24 @@ actions
     for zone in zones:
         z_min = zone.origin[2] - 0.01
         z_max = zone.origin[2] + 0.05  # approximate axial extent of one blade row
+        cell_set = f"{zone.cell_zone}_cells"
         action_lines += [
             "    {",
-            f"        name    {zone.cell_zone};",
-            "        type    cellZoneSet;",
+            f"        name    {cell_set};",
+            "        type    cellSet;",
             "        action  new;",
             "        source  cylinderToCell;",
             f"        p1      ({zone.origin[0]} {zone.origin[1]} {z_min});",
             f"        p2      ({zone.origin[0]} {zone.origin[1]} {z_max});",
             f"        radius  {tip_r * 1.05:.6f};",
+            "    }",
+            "",
+            "    {",
+            f"        name    {zone.cell_zone};",
+            "        type    cellZoneSet;",
+            "        action  new;",
+            "        source  setToCellZone;",
+            f"        set     {cell_set};",
             "    }",
             "",
         ]

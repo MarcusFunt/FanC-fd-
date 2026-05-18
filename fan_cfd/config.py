@@ -389,7 +389,7 @@ def load_config(path: str | Path) -> FanCFDConfig:
     if not path.exists():
         raise FileNotFoundError(f"Config file not found: {path}")
 
-    with open(path, "r") as fh:
+    with open(path, "r", encoding="utf-8") as fh:
         raw = yaml.safe_load(fh)
 
     if raw is None:

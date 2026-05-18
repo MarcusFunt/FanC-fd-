@@ -55,8 +55,8 @@ def build_and_export_geometry(
     validations = validate_stl_files(stl_paths)
     for name, ok in validations.items():
         if ok:
-            logger.info("  ✓ %s.stl validated", name)
+            logger.info("  [OK] %s.stl validated", name)
         else:
-            logger.warning("  ✗ %s.stl FAILED validation", name)
+            logger.warning("  [FAIL] %s.stl FAILED validation", name)
 
     return stl_paths

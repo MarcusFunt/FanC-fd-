@@ -1,0 +1,42 @@
+/*---------------------------------------------------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+Build  : 13-441953dfbb42
+Exec   : topoSet
+Date   : May 18 2026
+Time   : 11:39:24
+Host   : "MarcusLaptop"
+PID    : 743
+I/O    : uncollated
+Case   : /mnt/c/Users/marcu/Documents/GitHub/FanC(fd)/runs/codex_openfoam_smoke_run/openfoam
+nProcs : 1
+sigFpe : Enabling floating point exception trapping (FOAM_SIGFPE).
+fileModificationChecking : Monitoring run-time modified files using timeStampMaster (fileModificationSkew 10)
+allowSystemOperations : Allowing user-supplied system call operations
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+--> FOAM Warning : 
+topoSet has been superseded by createZones and is now deprecated.
+
+Create time
+
+Create mesh for time = 0
+
+Reading "topoSetDict"
+
+Time = 0s
+    mesh not changed.
+Created cellSet rotor_1_zone_cells
+    Applying source cylinderToCell
+    Adding cells with centre within cylinder, with point1 = (0 0 -0.01), point2 = (0 0 0.05) and radius = 0.063
+    cellSet rotor_1_zone_cells now size 2548
+Created cellZoneSet rotor_1_zone
+    Applying source setToCellZone
+    Adding all cells from cellSet rotor_1_zone_cells ...
+    cellZoneSet rotor_1_zone now size 2548
+End
+

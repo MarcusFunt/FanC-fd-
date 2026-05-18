@@ -57,7 +57,7 @@ def naca4digit(code: str, n_points: int = 100) -> np.ndarray:
         5
         * t
         * (
-            0.2969 * np.sqrt(x)
+            0.2969 * np.sqrt(np.maximum(x, 0.0))
             - 0.1260 * x
             - 0.3516 * x**2
             + 0.2843 * x**3
@@ -66,21 +66,17 @@ def naca4digit(code: str, n_points: int = 100) -> np.ndarray:
     )
 
     # Mean camber line and gradient
-    yc = np.where(
-        x < p,
-        m / p**2 * (2 * p * x - x**2),
-        m / (1 - p) ** 2 * ((1 - 2 * p) + 2 * p * x - x**2),
-    )
-
-    dyc_dx = np.where(
-        x < p,
-        2 * m / p**2 * (p - x),
-        2 * m / (1 - p) ** 2 * (p - x),
-    )
-    # Avoid divide issues when p == 0 (symmetric airfoil)
-    if p == 0.0:
-        yc = np.zeros_like(x)
-        dyc_dx = np.zeros_like(x)
+    yc = np.zeros_like(x)
+    dyc_dx = np.zeros_like(x)
+    if 0.0 < p < 1.0:
+        fore = x < p
+        aft = ~fore
+        yc[fore] = m / p**2 * (2 * p * x[fore] - x[fore] ** 2)
+        yc[aft] = m / (1 - p) ** 2 * (
+            (1 - 2 * p) + 2 * p * x[aft] - x[aft] ** 2
+        )
+        dyc_dx[fore] = 2 * m / p**2 * (p - x[fore])
+        dyc_dx[aft] = 2 * m / (1 - p) ** 2 * (p - x[aft])
 
     theta = np.arctan(dyc_dx)
 
@@ -98,6 +94,7 @@ def naca4digit(code: str, n_points: int = 100) -> np.ndarray:
 
     x_all = np.concatenate([x_upper, x_lower])
     y_all = np.concatenate([y_upper, y_lower])
+    x_all = np.clip(x_all, 0.0, 1.0)
 
     return np.column_stack([x_all, y_all])
 
@@ -151,6 +148,8 @@ def naca4digit_upper_lower(code: str, n_points: int = 100) -> tuple[np.ndarray, 
     yu = yc + yt * np.cos(theta)
     xl = x + yt * np.sin(theta)
     yl = yc - yt * np.cos(theta)
+    xu = np.clip(xu, 0.0, 1.0)
+    xl = np.clip(xl, 0.0, 1.0)
 
     upper = np.column_stack([xu, yu])
     lower = np.column_stack([xl, yl])

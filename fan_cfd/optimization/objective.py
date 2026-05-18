@@ -78,30 +78,40 @@ class PenaltyCalculator:
             "flow_rate_m3_s": result.flow_rate_m3_s,
             "shaft_power_w": result.shaft_power_w,
             "max_non_ortho": result.mesh.max_non_ortho,
+            "max_skewness": result.mesh.max_skewness,
         }
 
         for name, threshold in constraints.items():
+            if name.startswith("min_"):
+                bare = name[4:]
+                if bare in value_map:
+                    actual = value_map.get(bare, float("nan"))
+                    if math.isnan(actual):
+                        penalty += 100.0
+                    elif actual < threshold:
+                        penalty += (threshold - actual) / max(abs(threshold), 1.0) * 100.0
+                    continue
+
+            if name.startswith("max_"):
+                bare = name[4:]
+                if bare in value_map:
+                    actual = value_map.get(bare, float("nan"))
+                    if math.isnan(actual):
+                        penalty += 100.0
+                    elif actual > threshold:
+                        penalty += (actual - threshold) / max(abs(threshold), 1.0) * 100.0
+                    continue
+
             val = value_map.get(name, float("nan"))
             if math.isnan(val):
                 penalty += 100.0
                 continue
 
-            # Convention: if threshold > 0, it's a minimum; if negative, upper bound
-            # Or use prefixes: 'min_' and 'max_' in key name
-            if name.startswith("min_"):
-                bare = name[4:]
-                actual = value_map.get(bare, float("nan"))
-                if not math.isnan(actual) and actual < threshold:
-                    penalty += (threshold - actual) / max(abs(threshold), 1.0) * 100.0
-            elif name.startswith("max_"):
-                bare = name[4:]
-                actual = value_map.get(bare, float("nan"))
-                if not math.isnan(actual) and actual > threshold:
-                    penalty += (actual - threshold) / max(abs(threshold), 1.0) * 100.0
-            else:
-                # Default: treat as minimum
-                if not math.isnan(val) and val < threshold:
-                    penalty += (threshold - val) / max(abs(threshold), 1.0) * 100.0
+            if name in self._UPPER_BOUNDS:
+                if val > threshold:
+                    penalty += (val - threshold) / max(abs(threshold), 1.0) * 100.0
+            elif val < threshold:
+                penalty += (threshold - val) / max(abs(threshold), 1.0) * 100.0
 
         return penalty
 

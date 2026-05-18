@@ -27,6 +27,7 @@ from fan_cfd.openfoam.dict_writer import (
     write_block_mesh_dict,
     write_boundary_condition_U,
     write_boundary_condition_k,
+    write_boundary_condition_nut,
     write_boundary_condition_omega,
     write_boundary_condition_p,
     write_control_dict,

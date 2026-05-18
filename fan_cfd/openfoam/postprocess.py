@@ -216,7 +216,11 @@ class PostProcessor:
             return mq
 
         log_text = log_path.read_text()
-        m = re.search(r"Max non-orthogonality\s*=\s*([\d.eE+\-]+)", log_text)
+        m = re.search(
+            r"(?:Max non-orthogonality\s*=\s*|Mesh non-orthogonality\s+Max:\s*)"
+            r"([\d.eE+\-]+)",
+            log_text,
+        )
         if m:
             mq.max_non_ortho = float(m.group(1))
         m = re.search(r"Max skewness\s*=\s*([\d.eE+\-]+)", log_text)
@@ -295,11 +299,21 @@ class PostProcessor:
 
         for dat_file in self._pp_dir.rglob(f"{func_name}/**/*.dat"):
             try:
-                # OpenFOAM forces: Time Fx Fy Fz Mx My Mz (pressure + viscous)
-                df = pd.read_csv(str(dat_file), comment="#", sep=r"\s+", header=None)
-                if len(df.columns) >= 7:
-                    # Mz is column 6 (0-indexed) for pressure contribution
-                    return float(df.iloc[-1, 6])
+                lines = [
+                    line.strip()
+                    for line in dat_file.read_text().splitlines()
+                    if line.strip() and not line.lstrip().startswith("#")
+                ]
+                if not lines:
+                    continue
+                values = [
+                    float(v)
+                    for v in re.findall(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", lines[-1])
+                ]
+                # OpenFOAM forces format:
+                # time, force_p(3), force_v(3), moment_p(3), moment_v(3)
+                if len(values) >= 13:
+                    return float(values[9] + values[12])
             except Exception:
                 continue
         return float("nan")
@@ -326,14 +340,14 @@ class PostProcessor:
 
 
 def _count_time_steps(log_text: str) -> int:
-    matches = re.findall(r"^Time = (\d+)", log_text, re.MULTILINE)
-    return int(matches[-1]) if matches else 0
+    matches = re.findall(r"^Time = ([\d.]+)s?", log_text, re.MULTILINE)
+    return int(float(matches[-1])) if matches else 0
 
 
 def _extract_residual_history(log_text: str) -> dict[str, list[float]]:
     """Extract per-field residual arrays from a solver log."""
     history: dict[str, list[float]] = {}
-    pattern = re.compile(r"Solving for (\w+),.*?Initial residual = ([\d.eE+\-]+)")
+    pattern = re.compile(r"Solving for (\w+),.*?Final residual = ([\d.eE+\-]+)")
     for m in pattern.finditer(log_text):
         fname = m.group(1)
         val = float(m.group(2))

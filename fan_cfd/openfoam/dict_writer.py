@@ -146,7 +146,6 @@ def write_snappy_hex_mesh_dict(
     # Build geometry section from STL files (skip combined meshes)
     skip_keys = {"full_assembly", "all_rotors", "all_stators"}
     geom_entries: list[str] = []
-    feature_entries: list[str] = []
     refinement_entries: list[str] = []
 
     for stl_name in stl_files:
@@ -154,16 +153,11 @@ def write_snappy_hex_mesh_dict(
         if base in skip_keys:
             continue
         geom_entries.append(
-            f"""    {base}.stl
+            f"""    {base}
     {{
         type triSurfaceMesh;
+        file "{base}.stl";
         name {base};
-    }}"""
-        )
-        feature_entries.append(
-            f"""    {{
-        file "{base}.eMesh";
-        level {ref_lvl};
     }}"""
         )
         refinement_entries.append(
@@ -178,7 +172,6 @@ def write_snappy_hex_mesh_dict(
         )
 
     geom_block = "\n".join(geom_entries)
-    feature_block = "\n    ".join(feature_entries)
     refine_block = "\n    ".join(refinement_entries)
 
     # Point inside the flow domain (upstream of blade)
@@ -186,10 +179,12 @@ def write_snappy_hex_mesh_dict(
     inside_y = (fan.hub_radius_m + fan.tip_radius_m) / 2.0
     inside_z = -cs * 3
 
+    add_layers = "true" if n_layers > 0 else "false"
+
     return write_foam_header("dictionary", "snappyHexMeshDict", "system") + f"""
 castellatedMesh true;
 snap            true;
-addLayers       true;
+addLayers       {add_layers};
 
 geometry
 {{
@@ -206,7 +201,6 @@ castellatedMeshControls
 
     features
     (
-    {feature_block}
     );
 
     refinementSurfaces
@@ -233,7 +227,7 @@ snapControls
     nRelaxIter          5;
     nFeatureSnapIter    10;
     implicitFeatureSnap false;
-    explicitFeatureSnap true;
+    explicitFeatureSnap false;
     multiRegionFeatureSnap false;
 }}
 
@@ -285,9 +279,6 @@ meshQualityControls
 writeFlags
 (
     scalarLevels
-    surfaceSets
-    pointSets
-    cellSets
 );
 
 mergeTolerance 1e-6;
@@ -390,6 +381,11 @@ fluxRequired
 {
     default         no;
     p               ;
+}
+
+wallDist
+{
+    method          meshWave;
 }
 
 // ************************************************************************* //
@@ -533,7 +529,7 @@ boundaryField
         type            slip;
     }}
 
-    "(hub_wall|duct_wall|rotor.*|stator.*)"
+    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
     {{
         type            noSlip;
     }}
@@ -567,7 +563,7 @@ boundaryField
         type            slip;
     }
 
-    "(hub_wall|duct_wall|rotor.*|stator.*)"
+    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
     {
         type            zeroGradient;
     }
@@ -605,7 +601,7 @@ boundaryField
         type            slip;
     }}
 
-    "(hub_wall|duct_wall|rotor.*|stator.*)"
+    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
     {{
         type            kqRWallFunction;
         value           uniform {k_val:.6e};
@@ -647,7 +643,7 @@ boundaryField
         type            slip;
     }}
 
-    "(hub_wall|duct_wall|rotor.*|stator.*)"
+    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
     {{
         type            omegaWallFunction;
         value           uniform {omega_val:.6e};
@@ -684,7 +680,7 @@ boundaryField
         value           uniform 0;
     }
 
-    "(hub_wall|duct_wall|rotor.*|stator.*)"
+    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
     {
         type            nutkWallFunction;
         value           uniform 0;
@@ -730,13 +726,13 @@ def write_function_objects(fan: "FanConfig") -> str:
     forces_{stage.name}
     {{
         type            forces;
-        libs            (forces);
+        libs            ("libforces.so");
         patches         ({stage.name});
         rho             rhoInf;
         rhoInf          1.225;
         CofR            (0 0 {stage.axial_position_m:.6f});
         writeControl    timeStep;
-        writeInterval   50;
+        writeInterval   1;
     }}"""
         )
 
@@ -756,11 +752,11 @@ def write_function_objects(fan: "FanConfig") -> str:
     pressureRise
     {{
         type            surfaceFieldValue;
-        libs            (fieldFunctionObjects);
+        libs            ("libfieldFunctionObjects.so");
         fields          (p);
         operation       areaAverage;
-        regionType      patch;
-        name            outlet;
+        patch           outlet;
+        writeFields     no;
         writeControl    timeStep;
         writeInterval   10;
     }}
@@ -768,11 +764,11 @@ def write_function_objects(fan: "FanConfig") -> str:
     pressureInlet
     {{
         type            surfaceFieldValue;
-        libs            (fieldFunctionObjects);
+        libs            ("libfieldFunctionObjects.so");
         fields          (p);
         operation       areaAverage;
-        regionType      patch;
-        name            inlet;
+        patch           inlet;
+        writeFields     no;
         writeControl    timeStep;
         writeInterval   10;
     }}
@@ -780,11 +776,11 @@ def write_function_objects(fan: "FanConfig") -> str:
     flowRate
     {{
         type            surfaceFieldValue;
-        libs            (fieldFunctionObjects);
+        libs            ("libfieldFunctionObjects.so");
         fields          (phi);
         operation       sum;
-        regionType      patch;
-        name            inlet;
+        patch           inlet;
+        writeFields     no;
         writeControl    timeStep;
         writeInterval   10;
     }}

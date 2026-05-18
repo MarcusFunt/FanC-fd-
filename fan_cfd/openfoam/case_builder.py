@@ -26,6 +26,7 @@ from fan_cfd.openfoam.dict_writer import (
     write_transport_properties,
     write_turbulence_properties,
 )
+from fan_cfd.openfoam.cell_zones import write_topo_set_dict
 from fan_cfd.openfoam.mrf_zones import build_mrf_zones, write_mrf_properties
 from fan_cfd.utils.logging_utils import get_logger
 from fan_cfd.utils.paths import get_template_dir
@@ -76,10 +77,13 @@ class OpenFoamCaseBuilder:
         self.write_block_mesh_dict()
         self.write_snappy_hex_mesh_dict()
         self.write_mrf_properties()
+        self.write_topo_set_dict()
         self.write_transport_properties()
         self.write_turbulence_properties()
         self.write_boundary_conditions()
         self.write_control_dict()
+        self.write_fv_schemes()
+        self.write_fv_solution()
         self.write_function_objects()
         if self.cfd.run.parallel:
             self.write_decompose_par_dict()
@@ -127,6 +131,13 @@ class OpenFoamCaseBuilder:
         write_mrf_properties(self._mrf_zones, out)
         logger.debug("Wrote MRFProperties with %d zones", len(self._mrf_zones))
 
+    def write_topo_set_dict(self) -> None:
+        if not self._mrf_zones:
+            return
+        out = self.case_dir / "system" / "topoSetDict"
+        write_topo_set_dict(self._mrf_zones, self.fan, out)
+        logger.debug("Wrote topoSetDict with %d zones", len(self._mrf_zones))
+
     def write_transport_properties(self) -> None:
         content = write_transport_properties(self.cfd.fluid)
         self._write("constant/transportProperties", content)
@@ -148,6 +159,12 @@ class OpenFoamCaseBuilder:
     def write_control_dict(self) -> None:
         content = write_control_dict(self.cfd)
         self._write("system/controlDict", content)
+
+    def write_fv_schemes(self) -> None:
+        self._write("system/fvSchemes", write_fv_schemes())
+
+    def write_fv_solution(self) -> None:
+        self._write("system/fvSolution", write_fv_solution())
 
     def write_function_objects(self) -> None:
         content = write_function_objects(self.fan)

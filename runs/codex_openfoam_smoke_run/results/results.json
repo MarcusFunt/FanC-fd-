@@ -1,0 +1,30 @@
+{
+  "case_dir": "runs/codex_openfoam_smoke_run/openfoam",
+  "config_name": "codex_openfoam_smoke",
+  "flow_rate_m3_s": 0.288000001,
+  "pressure_rise_pa": -2.86706748,
+  "torque_nm": 0.0049033683453,
+  "per_stage_torque": {
+    "rotor_1": -0.0049033683453
+  },
+  "shaft_power_w": 2.567397661906537,
+  "efficiency": 0.0,
+  "mesh": {
+    "max_non_ortho": 42.780093,
+    "max_skewness": 2.5767832,
+    "n_cells": 6815,
+    "ok": true
+  },
+  "convergence": {
+    "converged": true,
+    "n_iterations": 20,
+    "final_residuals": {
+      "Ux": 0.0001351423,
+      "Uy": 0.00013400262,
+      "Uz": 6.1485113e-05,
+      "p": 1.8152958e-06,
+      "omega": 1.3661614e-05,
+      "k": 7.3236373e-05
+    }
+  }
+}

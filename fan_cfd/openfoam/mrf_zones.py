@@ -57,13 +57,18 @@ def build_mrf_zones(fan: "FanConfig") -> list[MRFZone]:
         if stage.rotation_direction == "clockwise":
             omega = -omega
 
+        non_rotating_patches = ["inlet", "outlet", "sides", "hub"]
+        if fan.duct is not None and fan.duct.enabled:
+            non_rotating_patches.append("duct")
+        non_rotating_patches.extend(s.name for s in fan.stator_stages)
+
         zone = MRFZone(
             zone_name=f"{stage.name}_MRF",
             cell_zone=f"{stage.name}_zone",
             axis=(0.0, 0.0, 1.0),
             origin=(0.0, 0.0, stage.axial_position_m),
             omega_rad_s=omega,
-            nonRotating_patches=["inlet", "outlet", "hub_wall", "duct_wall"],
+            nonRotating_patches=non_rotating_patches,
         )
         zones.append(zone)
 

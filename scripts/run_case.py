@@ -121,8 +121,12 @@ def main() -> int:
         try:
             runner = OpenFoamRunner(case_dir, config.cfd)
             run_result = runner.run_full_pipeline()
+            if run_result.error_message:
+                logger.error("OpenFOAM pipeline failed: %s", run_result.error_message)
+                return 1
             if run_result.solver.diverged:
                 logger.error("Solver diverged! Check logs in %s", case_dir)
+                return 1
             elif run_result.solver.converged:
                 logger.info("Solver converged in %d iterations", run_result.solver.n_iterations)
             else:
