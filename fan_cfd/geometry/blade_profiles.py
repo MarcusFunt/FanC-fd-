@@ -226,3 +226,41 @@ def apply_profile_scale(profile: "Profile", scale: float) -> "Profile":
         return Profile(type=profile.type, points=new_points)
 
     raise ValueError(f"Unknown profile type: {profile.type}")
+
+
+def resolve_inherited_profile(
+    profile: "Profile",
+    profile_map: "dict[str, Profile | StageConfig]",
+    profile_attr: str = "chord_profile",
+    stack: tuple[str, ...] = (),
+) -> "Profile":
+    """
+    Resolve one INHERIT profile against a stage/profile mapping.
+
+    This helper preserves the older singular API while the main multistage
+    resolver handles full StageConfig lists.
+    """
+    from fan_cfd.config import ProfileType
+
+    if profile.type != ProfileType.INHERIT:
+        return profile
+
+    src_name = profile.from_stage
+    if not src_name:
+        raise ValueError("INHERIT profile missing 'from_stage'")
+    if src_name in stack:
+        cycle = " -> ".join((*stack, src_name))
+        raise RuntimeError(f"Circular profile inheritance detected: {cycle}")
+
+    source = profile_map.get(src_name)
+    if source is None:
+        raise ValueError(f"INHERIT profile references unknown stage '{src_name}'")
+
+    source_profile = getattr(source.blade, profile_attr) if hasattr(source, "blade") else source
+    resolved_source = resolve_inherited_profile(
+        source_profile,
+        profile_map,
+        profile_attr=profile_attr,
+        stack=(*stack, src_name),
+    )
+    return apply_profile_scale(resolved_source, profile.scale)

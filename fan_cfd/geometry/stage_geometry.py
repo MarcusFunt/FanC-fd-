@@ -42,6 +42,7 @@ logger = get_logger(__name__)
 
 # Number of airfoil surface points per side (upper/lower)
 _PROFILE_POINTS = 32
+_MAX_BLADE_ROOT_OVERLAP_M = 5e-4
 
 
 def _make_section_3d(
@@ -64,8 +65,9 @@ def _make_section_3d(
 
     Returns
     -------
-    np.ndarray, shape (2*n_pts, 3)
-        3D vertices of the airfoil section: upper side then lower side.
+    np.ndarray
+        Closed-loop 3D vertices of the airfoil section, ordered around the
+        airfoil boundary with the duplicate leading-edge point removed.
     """
     upper_2d, lower_2d = naca4digit_upper_lower(airfoil_code, n_points=n_pts)
 
@@ -116,14 +118,18 @@ def _make_section_3d(
             pts[:, 0] = x * cos_s - y * sin_s
             pts[:, 1] = x * sin_s + y * cos_s
 
-    return np.vstack([upper_3d, lower_3d])
+    # Airfoil arrays are both LE -> TE. For a printable solid, each radial
+    # section must be a closed perimeter rather than two disconnected strips.
+    # Keep a finite trailing-edge thickness, then return along the lower side
+    # while dropping the duplicate leading-edge vertex.
+    return np.vstack([upper_3d, lower_3d[:0:-1]])
 
 
 def _loft_sections(sections: list[np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
     """
     Create a ruled surface between consecutive airfoil sections.
 
-    Each section is shape (2*N, 3) where upper=[0:N], lower=[N:2N].
+    Each section is a closed-loop perimeter with the same vertex count.
 
     Returns
     -------
@@ -132,22 +138,23 @@ def _loft_sections(sections: list[np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
     """
     all_verts: list[np.ndarray] = []
     all_faces: list[np.ndarray] = []
-    v_offset = 0
     n_sec = len(sections)
-    n_pts = len(sections[0]) // 2  # points per side
+    n_pts = len(sections[0])
+    if any(len(section) != n_pts for section in sections):
+        raise ValueError("All blade sections must have the same vertex count")
 
     for i in range(n_sec):
         all_verts.append(sections[i])
 
     # Build triangle strips between consecutive sections
     for i in range(n_sec - 1):
-        base = i * (2 * n_pts)
-        next_base = (i + 1) * (2 * n_pts)
-        for j in range(2 * n_pts - 1):
+        base = i * n_pts
+        next_base = (i + 1) * n_pts
+        for j in range(n_pts):
             v0 = base + j
-            v1 = base + j + 1
+            v1 = base + ((j + 1) % n_pts)
             v2 = next_base + j
-            v3 = next_base + j + 1
+            v3 = next_base + ((j + 1) % n_pts)
             all_faces.append([v0, v1, v2])
             all_faces.append([v1, v3, v2])
 
@@ -157,7 +164,7 @@ def _loft_sections(sections: list[np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
 
 
 def _cap_section(
-    section: np.ndarray, center: np.ndarray
+    section: np.ndarray, center: np.ndarray, reverse: bool = False
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Cap an open cross-section ring with a triangle fan.
@@ -168,6 +175,8 @@ def _cap_section(
         The boundary vertices of the cap.
     center : np.ndarray, shape (3,)
         The center point of the cap.
+    reverse : bool
+        Reverse triangle winding for the root cap so normals point outward.
 
     Returns
     -------
@@ -179,7 +188,11 @@ def _cap_section(
     center_idx = n
     faces = []
     for j in range(n):
-        faces.append([j, (j + 1) % n, center_idx])
+        nxt = (j + 1) % n
+        if reverse:
+            faces.append([j, center_idx, nxt])
+        else:
+            faces.append([j, nxt, center_idx])
     return verts, np.array(faces, dtype=np.int32)
 
 
@@ -194,7 +207,9 @@ def generate_single_blade(
     blade_cfg = stage.blade
     hub_r = fan.hub_radius_m
     tip_r = fan.tip_radius_m
-    span = tip_r - hub_r
+    root_overlap = min(_MAX_BLADE_ROOT_OVERLAP_M, 0.05 * hub_r, 0.05 * (tip_r - hub_r))
+    root_r = max(0.0, hub_r - root_overlap)
+    span = tip_r - root_r
     n_sec = blade_cfg.radial_sections
     axial_pos = stage.axial_position_m
 
@@ -202,7 +217,7 @@ def generate_single_blade(
 
     for i in range(n_sec):
         r_norm = i / (n_sec - 1)
-        radius = hub_r + r_norm * span
+        radius = root_r + r_norm * span
 
         chord = interpolate_profile(blade_cfg.chord_profile, r_norm)
         twist_deg = interpolate_profile(blade_cfg.twist_profile_deg, r_norm)
@@ -230,13 +245,13 @@ def generate_single_blade(
     verts, faces = _loft_sections(sections)
 
     # Cap at root (hub radius)
-    root_center = np.array([hub_r, 0.0, axial_pos])
-    cap_verts_root, cap_faces_root = _cap_section(sections[0], root_center)
+    root_center = sections[0].mean(axis=0)
+    cap_verts_root, cap_faces_root = _cap_section(sections[0], root_center, reverse=True)
     offset_root = len(verts)
     cap_faces_root_shifted = cap_faces_root + offset_root
 
     # Cap at tip
-    tip_center = np.array([tip_r, 0.0, axial_pos])
+    tip_center = sections[-1].mean(axis=0)
     cap_verts_tip, cap_faces_tip = _cap_section(sections[-1], tip_center)
     offset_tip = len(verts) + len(cap_verts_root)
     cap_faces_tip_shifted = cap_faces_tip + offset_tip
@@ -245,6 +260,7 @@ def generate_single_blade(
     all_faces = np.vstack([faces, cap_faces_root_shifted, cap_faces_tip_shifted])
 
     mesh = trimesh.Trimesh(vertices=all_verts, faces=all_faces, process=True)
+    mesh.fix_normals()
     return mesh
 
 

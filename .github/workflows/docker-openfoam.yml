@@ -1,0 +1,35 @@
+name: Docker OpenFOAM
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  docker-openfoam:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Docker image and run validation
+        run: >
+          python scripts/docker_pipeline.py
+          --image fan-cfd-openfoam:ci
+          --config configs/fifty_mm_three_stack_tmp_120w.yaml
+          --run-dir runs/ci_fifty_mm_three_stack_tmp_120w
+
+      - name: Upload generated run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fan-cfd-openfoam-run
+          path: runs/ci_fifty_mm_three_stack_tmp_120w
+          if-no-files-found: ignore

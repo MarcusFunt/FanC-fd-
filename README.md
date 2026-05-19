@@ -55,6 +55,34 @@ source /opt/openfoam2206/etc/bashrc
 
 ---
 
+## Docker/OpenFOAM workflow
+
+The easiest reproducible path is the Docker pipeline. It builds an Ubuntu
+OpenFOAM 13 image, installs the Python dependencies, runs the test suite,
+generates the default 50 mm three-stack geometry, builds the OpenFOAM case, and
+writes the render screen.
+
+```bash
+python scripts/docker_pipeline.py
+```
+
+Run the full mesh and solver pipeline inside Docker:
+
+```bash
+python scripts/docker_pipeline.py --full-cfd
+```
+
+Run an interactive OpenFOAM-enabled shell:
+
+```bash
+python scripts/docker_pipeline.py --command bash
+```
+
+The same Docker validation runs in GitHub Actions via
+`.github/workflows/docker-openfoam.yml`.
+
+---
+
 ## Quick start
 
 ```bash

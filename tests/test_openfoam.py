@@ -14,7 +14,7 @@ from fan_cfd.config import (
     BoundaryConfig,
     BladeConfig,
     CFDConfig,
-    FanCFDConfig,
+    DuctConfig,
     FanConfig,
     FluidConfig,
     MeshConfig,
@@ -23,6 +23,7 @@ from fan_cfd.config import (
     StageConfig,
     StageType,
 )
+from fan_cfd.openfoam.cell_zones import write_topo_set_dict
 from fan_cfd.openfoam.dict_writer import (
     write_block_mesh_dict,
     write_boundary_condition_U,
@@ -33,13 +34,8 @@ from fan_cfd.openfoam.dict_writer import (
     write_control_dict,
     write_decompose_par_dict,
     write_foam_header,
-    write_fv_schemes,
-    write_fv_solution,
-    write_snappy_hex_mesh_dict,
-    write_transport_properties,
-    write_turbulence_properties,
 )
-from fan_cfd.openfoam.mrf_zones import MRFZone, build_mrf_zones, write_mrf_properties
+from fan_cfd.openfoam.mrf_zones import build_mrf_zones, write_mrf_properties
 from fan_cfd.openfoam.runner import _parse_check_mesh_log, _parse_solver_log
 
 SAMPLE_DATA = Path(__file__).parent / "sample_data"
@@ -176,6 +172,67 @@ class TestMRFZones:
         fan = _make_fan_config(n_rotors=2)
         zones = build_mrf_zones(fan)
         assert len(zones) == 2
+
+    def test_compact_mrf_zones_do_not_overlap_or_exceed_duct(self):
+        stages = []
+        for i, (stage_type, z) in enumerate(
+            [
+                (StageType.ROTOR, 0.004),
+                (StageType.STATOR, 0.009),
+                (StageType.ROTOR, 0.014),
+                (StageType.STATOR, 0.019),
+                (StageType.ROTOR, 0.024),
+                (StageType.STATOR, 0.029),
+            ]
+        ):
+            stage_number = i // 2 + 1
+            stage_name = (
+                f"rotor_{stage_number}"
+                if stage_type == StageType.ROTOR
+                else f"stator_{stage_number}"
+            )
+            stages.append(
+                StageConfig(
+                    name=stage_name,
+                    type=stage_type,
+                    axial_position_m=z,
+                    blade_count=17,
+                    rpm=20000.0 if stage_type == StageType.ROTOR else None,
+                    blade=BladeConfig(
+                        chord_profile=Profile.constant(0.003),
+                        twist_profile_deg=Profile.constant(55.0),
+                    ),
+                )
+            )
+
+        fan = FanConfig(
+            name="compact",
+            max_diameter_m=0.050,
+            hub_diameter_m=0.018,
+            rpm=20000.0,
+            duct=DuctConfig(
+                enabled=True,
+                inner_diameter_m=0.051,
+                wall_thickness_m=0.002,
+                total_length_m=0.038,
+            ),
+            stages=stages,
+        )
+        zones = build_mrf_zones(fan)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out = Path(tmpdir) / "topoSetDict"
+            write_topo_set_dict(zones, fan, out)
+            text = out.read_text()
+
+        p1_z = [float(match) for match in re.findall(r"p1\s+\([^)]* ([\d.eE+\-]+)\);", text)]
+        p2_z = [float(match) for match in re.findall(r"p2\s+\([^)]* ([\d.eE+\-]+)\);", text)]
+
+        assert len(p1_z) == len(zones)
+        assert len(p2_z) == len(zones)
+        assert all(0.0 <= z <= fan.duct.total_length_m for z in p1_z + p2_z)
+        assert all(a < b for a, b in zip(p1_z, p2_z))
+        assert all(p2_z[i] <= p1_z[i + 1] for i in range(len(zones) - 1))
 
 
 # ---------------------------------------------------------------------------

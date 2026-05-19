@@ -1,0 +1,195 @@
+# fifty_mm_three_stack_tmp_120w.yaml
+# ===================================
+# 50 mm ducted, three rotor/stator-pair stack with turbomolecular-pump-style
+# alternating high-angle rotors and stators.
+#
+# Design intent:
+# - 50 mm blade-tip diameter.
+# - Three repeating rotor + stator layers, inlet to outlet.
+# - 20,000 RPM rotor speed.
+# - Objective is pressure rise with a 120 W shaft-power cap.
+#
+# CFD note:
+# This is configured for near-atmospheric continuum air modelling with the
+# project's simpleFoam + MRF pipeline. It is not a valid molecular-flow
+# turbomolecular pump simulation at high vacuum.
+
+fan:
+  name: fifty_mm_three_stack_tmp_120w
+  max_diameter_m: 0.050
+  hub_diameter_m: 0.018
+  rpm: 20000.0
+
+  duct:
+    enabled: true
+    inner_diameter_m: 0.051
+    wall_thickness_m: 0.002
+    total_length_m: 0.038
+    inlet_clearance_m: 0.004
+    outlet_clearance_m: 0.006
+
+  stages:
+    - name: rotor_1
+      type: rotor
+      axial_position_m: 0.004
+      blade_count: 17
+      rpm: 20000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca0008
+        radial_sections: 9
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.0026]
+            - [1.0, 0.0034]
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 62.0]
+            - [1.0, 56.0]
+        thickness_scale: 0.55
+
+    - name: stator_1
+      type: stator
+      axial_position_m: 0.009
+      blade_count: 19
+      blade:
+        airfoil: naca0008
+        radial_sections: 9
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.0026]
+            - [1.0, 0.0034]
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -60.0]
+            - [1.0, -54.0]
+        thickness_scale: 0.55
+
+    - name: rotor_2
+      type: rotor
+      axial_position_m: 0.014
+      blade_count: 18
+      rpm: 20000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca0008
+        radial_sections: 9
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.0025]
+            - [1.0, 0.0032]
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 59.0]
+            - [1.0, 53.0]
+        thickness_scale: 0.55
+
+    - name: stator_2
+      type: stator
+      axial_position_m: 0.019
+      blade_count: 20
+      blade:
+        airfoil: naca0008
+        radial_sections: 9
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.0025]
+            - [1.0, 0.0032]
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -57.0]
+            - [1.0, -51.0]
+        thickness_scale: 0.55
+
+    - name: rotor_3
+      type: rotor
+      axial_position_m: 0.024
+      blade_count: 19
+      rpm: 20000.0
+      rotation_direction: counterclockwise
+      blade:
+        airfoil: naca0008
+        radial_sections: 9
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.0024]
+            - [1.0, 0.0031]
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, 56.0]
+            - [1.0, 50.0]
+        thickness_scale: 0.55
+
+    - name: stator_3
+      type: stator
+      axial_position_m: 0.029
+      blade_count: 21
+      blade:
+        airfoil: naca0008
+        radial_sections: 9
+        chord_profile:
+          type: linear
+          points:
+            - [0.0, 0.0024]
+            - [1.0, 0.0031]
+        twist_profile_deg:
+          type: linear
+          points:
+            - [0.0, -54.0]
+            - [1.0, -48.0]
+        thickness_scale: 0.55
+
+cfd:
+  solver: simpleFoam
+  rotation_model: MRF
+  turbulence_model: kOmegaSST
+
+  inlet:
+    patch_name: inlet
+    velocity_m_s: 8.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.051
+
+  outlet:
+    patch_name: outlet
+    velocity_m_s: 8.0
+    turbulence_intensity: 0.05
+    hydraulic_diameter_m: 0.051
+
+  fluid:
+    nu_m2_s: 1.5e-5
+    rho_kg_m3: 1.225
+
+  mesh:
+    base_cell_size_m: 0.0015
+    refinement_levels: 3
+    boundary_layers: 4
+    boundary_layer_expansion: 1.2
+    domain_length_factor: 4.0
+    n_processors: 4
+
+  run:
+    n_iterations: 600
+    write_interval: 100
+    convergence_residual: 1.0e-4
+    parallel: false
+    n_procs: 4
+    purge_write: 1
+
+objective:
+  mode: single
+  maximize: pressure_rise
+  constraints:
+    min_pressure_rise_pa: 300.0
+    min_flow_rate_m3_s: 0.004
+    max_shaft_power_w: 120.0

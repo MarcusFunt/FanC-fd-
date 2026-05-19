@@ -137,6 +137,7 @@ def generate_full_assembly(
     meshes: dict[str, trimesh.Trimesh] = {}
     all_rotor_blades: list[trimesh.Trimesh] = []
     all_stator_blades: list[trimesh.Trimesh] = []
+    assembly_parts: list[trimesh.Trimesh] = []
     rotor_idx = 0
     stator_idx = 0
 
@@ -156,18 +157,21 @@ def generate_full_assembly(
             all_stator_blades.extend(blades)
 
         meshes[key] = blade_mesh
+        assembly_parts.append(blade_mesh)
         logger.info("  [%s] %s: %d vertices, %d faces", key, stage.name,
                     len(blade_mesh.vertices), len(blade_mesh.faces))
 
     # Hub
     hub_mesh = generate_hub(fan)
     meshes["hub"] = hub_mesh
+    assembly_parts.append(hub_mesh)
     logger.info("  [hub]: %d vertices, %d faces", len(hub_mesh.vertices), len(hub_mesh.faces))
 
     # Duct
     duct_mesh = generate_duct(fan)
     if duct_mesh is not None:
         meshes["duct"] = duct_mesh
+        assembly_parts.append(duct_mesh)
         logger.info("  [duct]: %d vertices, %d faces",
                     len(duct_mesh.vertices), len(duct_mesh.faces))
 
@@ -177,8 +181,7 @@ def generate_full_assembly(
     if all_stator_blades:
         meshes["all_stators"] = trimesh.util.concatenate(all_stator_blades)
 
-    all_parts = list(meshes.values())
-    if all_parts:
-        meshes["full_assembly"] = trimesh.util.concatenate(all_parts)
+    if assembly_parts:
+        meshes["full_assembly"] = trimesh.util.concatenate(assembly_parts)
 
     return meshes

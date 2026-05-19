@@ -32,7 +32,10 @@ def build_geometry(config: "FanCFDConfig") -> dict[str, trimesh.Trimesh]:
         Named meshes: rotor_1, stator_1, hub, duct, full_assembly, etc.
     """
     logger.info("Building geometry for fan '%s'", config.fan.name)
-    meshes = generate_full_assembly(config.fan, config.fan.stages)
+    from fan_cfd.multistage.stage_config import resolve_inherited_profiles
+
+    stages = resolve_inherited_profiles(config.fan.stages)
+    meshes = generate_full_assembly(config.fan, stages)
     logger.info("Generated %d mesh components", len(meshes))
     return meshes
 
