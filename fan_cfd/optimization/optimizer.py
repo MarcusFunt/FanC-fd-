@@ -134,11 +134,10 @@ class FanOptimizer:
     def run_trial(self, config: "FanCFDConfig", trial_id: int) -> TrialResult:
         """Run CFD for one trial config and return scored result."""
         import hashlib
-        import tempfile
 
         from fan_cfd.geometry.fan_geometry import build_and_export_geometry
         from fan_cfd.openfoam.case_builder import OpenFoamCaseBuilder
-        from fan_cfd.openfoam.postprocess import FanPerformance, PostProcessor
+        from fan_cfd.openfoam.postprocess import PostProcessor
         from fan_cfd.openfoam.runner import OpenFoamRunner
 
         trial_dir = self.output_dir / f"trial_{trial_id:04d}"
@@ -162,6 +161,8 @@ class FanOptimizer:
             # Run
             runner = OpenFoamRunner(case_dir, config.cfd)
             run_result = runner.run_full_pipeline()
+            if not run_result.success:
+                raise RuntimeError(run_result.error_message or "OpenFOAM pipeline failed")
 
             # Postprocess
             pp = PostProcessor(case_dir, config.fan)
@@ -242,7 +243,7 @@ class RandomSearchOptimizer(FanOptimizer):
         dvars: dict[str, float] = {}
 
         for stage in config.fan.stages:
-            from fan_cfd.config import ProfileType, StageType
+            from fan_cfd.config import StageType
 
             if stage.type == StageType.ROTOR:
                 bc = int(random.uniform(*self.BOUNDS["blade_count"]))

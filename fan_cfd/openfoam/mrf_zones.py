@@ -11,8 +11,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from fan_cfd.utils.names import openfoam_identifier
+
 if TYPE_CHECKING:
-    from fan_cfd.config import FanConfig, StageConfig
+    from fan_cfd.config import FanConfig
 
 
 @dataclass
@@ -60,11 +62,12 @@ def build_mrf_zones(fan: "FanConfig") -> list[MRFZone]:
         non_rotating_patches = ["inlet", "outlet", "sides", "hub"]
         if fan.duct is not None and fan.duct.enabled:
             non_rotating_patches.append("duct")
-        non_rotating_patches.extend(s.name for s in fan.stator_stages)
+        non_rotating_patches.extend(openfoam_identifier(s.name, "stage") for s in fan.stator_stages)
+        patch_name = openfoam_identifier(stage.name, "stage")
 
         zone = MRFZone(
-            zone_name=f"{stage.name}_MRF",
-            cell_zone=f"{stage.name}_zone",
+            zone_name=f"{patch_name}_MRF",
+            cell_zone=f"{patch_name}_zone",
             axis=(0.0, 0.0, 1.0),
             origin=(0.0, 0.0, stage.axial_position_m),
             omega_rad_s=omega,
@@ -113,7 +116,7 @@ def write_mrf_properties(zones: list[MRFZone], output_path: Path) -> None:
             f"{zone.zone_name}",
             "{",
             f"    cellZone        {zone.cell_zone};",
-            f"    active          yes;",
+            "    active          yes;",
             f"    nonRotatingPatches ( {non_rotating_str} );",
             f"    origin          ({zone.origin[0]} {zone.origin[1]} {zone.origin[2]});",
             f"    axis            ({zone.axis[0]} {zone.axis[1]} {zone.axis[2]});",

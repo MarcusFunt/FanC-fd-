@@ -6,6 +6,8 @@ pydantic>=2.0
 pyyaml>=6.0
 pandas>=2.0
 matplotlib>=3.7
+fastapi>=0.111
+uvicorn[standard]>=0.30
 
 # Optional: faster mesh operations
 # rtree>=1.0          # spatial indexing for trimesh

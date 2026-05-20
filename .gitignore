@@ -10,6 +10,10 @@ dist/
 build/
 .coverage
 htmlcov/
+node_modules/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 
 # Generated CFD/geometry outputs. Existing tracked fixtures remain tracked.
 runs/

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 import subprocess
-import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -58,6 +57,7 @@ class SolverResult:
 
     converged: bool = False
     diverged: bool = False
+    return_code: int = 0
     n_iterations: int = 0
     final_residuals: dict[str, float] = field(default_factory=dict)
     log_text: str = ""
@@ -156,7 +156,18 @@ class OpenFoamRunner:
         # 7. Solver
         logger.info("Running %s ...", self.config.solver)
         result.solver = self.run_solver()
-        result.success = not result.solver.diverged
+        if result.solver.return_code != 0:
+            result.error_message = (
+                f"{self.config.solver} failed with exit code {result.solver.return_code}"
+            )
+            result.success = False
+            return result
+        if result.solver.diverged:
+            result.error_message = f"{self.config.solver} diverged"
+            result.success = False
+            return result
+
+        result.success = True
 
         return result
 
@@ -191,7 +202,9 @@ class OpenFoamRunner:
             cmd = [self.config.solver]
         rc, log = self.run_command(cmd, self.config.solver)
         elapsed = time.time() - t0
-        return _parse_solver_log(log, elapsed)
+        result = _parse_solver_log(log, elapsed)
+        result.return_code = rc
+        return result
 
     # ------------------------------------------------------------------
     # Core subprocess wrapper

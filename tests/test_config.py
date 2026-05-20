@@ -12,16 +12,10 @@ from pydantic import ValidationError
 
 from fan_cfd.config import (
     BladeConfig,
-    CFDConfig,
-    DuctConfig,
     FanCFDConfig,
     FanConfig,
-    FluidConfig,
-    MeshConfig,
-    ObjectiveConfig,
     Profile,
     ProfileType,
-    RunConfig,
     StageConfig,
     StageType,
     _convert_legacy_config,
@@ -124,7 +118,6 @@ class TestFanConfig:
         assert fan.stages[0].rpm == 5000.0
 
     def test_omega_rad_s(self):
-        stage = self._make_stage()
         stage_with_fan = StageConfig(
             name="rotor_1",
             type=StageType.ROTOR,
@@ -247,6 +240,7 @@ class TestLoadConfig:
             "example_rotor_stator.yaml",
             "example_multistage_axial.yaml",
             "example_turbomolecular_style.yaml",
+            "jetengine_inspired_axial_compressor.yaml",
             "openfoam_smoke_test.yaml",
         ],
     )
@@ -280,6 +274,20 @@ class TestLoadConfig:
         assert rotor_2.blade.chord_profile.type == ProfileType.INHERIT
         assert rotor_2.blade.chord_profile.from_stage == "rotor_1"
         assert rotor_2.blade.chord_profile.scale == pytest.approx(0.9)
+
+    def test_jetengine_inspired_preset_details(self):
+        path = CONFIGS_DIR / "jetengine_inspired_axial_compressor.yaml"
+        if not path.exists():
+            pytest.skip("Config not found")
+        config = load_config(path)
+        rotor_stages = config.fan.rotor_stages
+        stator_stages = config.fan.stator_stages
+        assert config.fan.rpm == pytest.approx(15000.0)
+        assert config.cfd.inlet.velocity_m_s == pytest.approx(70.0)
+        assert len(config.fan.stages) == 12
+        assert len(rotor_stages) == 6
+        assert len(stator_stages) == 6
+        assert [stage.blade_count for stage in rotor_stages] == [24, 25, 25, 26, 27, 28]
 
     def test_config_not_found(self):
         with pytest.raises(FileNotFoundError):

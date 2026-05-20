@@ -149,11 +149,11 @@ class OpenFoamCaseBuilder:
     def write_boundary_conditions(self) -> None:
         bc_dir = self.case_dir / "0"
         bc_dir.mkdir(parents=True, exist_ok=True)
-        (bc_dir / "U").write_text(write_boundary_condition_U(self.cfd))
-        (bc_dir / "p").write_text(write_boundary_condition_p(self.cfd))
-        (bc_dir / "k").write_text(write_boundary_condition_k(self.cfd))
-        (bc_dir / "omega").write_text(write_boundary_condition_omega(self.cfd))
-        (bc_dir / "nut").write_text(write_boundary_condition_nut(self.cfd))
+        (bc_dir / "U").write_text(write_boundary_condition_U(self.cfd, self.fan))
+        (bc_dir / "p").write_text(write_boundary_condition_p(self.cfd, self.fan))
+        (bc_dir / "k").write_text(write_boundary_condition_k(self.cfd, self.fan))
+        (bc_dir / "omega").write_text(write_boundary_condition_omega(self.cfd, self.fan))
+        (bc_dir / "nut").write_text(write_boundary_condition_nut(self.cfd, self.fan))
         logger.debug("Wrote boundary conditions to 0/")
 
     def write_control_dict(self) -> None:

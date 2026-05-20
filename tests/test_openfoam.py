@@ -34,9 +34,16 @@ from fan_cfd.openfoam.dict_writer import (
     write_control_dict,
     write_decompose_par_dict,
     write_foam_header,
+    write_function_objects,
 )
 from fan_cfd.openfoam.mrf_zones import build_mrf_zones, write_mrf_properties
-from fan_cfd.openfoam.runner import _parse_check_mesh_log, _parse_solver_log
+from fan_cfd.openfoam.runner import (
+    CheckMeshResult,
+    OpenFoamRunner,
+    SolverResult,
+    _parse_check_mesh_log,
+    _parse_solver_log,
+)
 
 SAMPLE_DATA = Path(__file__).parent / "sample_data"
 
@@ -234,6 +241,17 @@ class TestMRFZones:
         assert all(a < b for a, b in zip(p1_z, p2_z))
         assert all(p2_z[i] <= p1_z[i + 1] for i in range(len(zones) - 1))
 
+    def test_custom_stage_names_are_sanitized_for_mrf_zones(self):
+        fan = _make_fan_config(n_rotors=1)
+        fan.stages[0].name = "front rotor"
+        fan.stages[1].name = "exit-stator"
+
+        zones = build_mrf_zones(fan)
+
+        assert zones[0].zone_name == "front_rotor_MRF"
+        assert zones[0].cell_zone == "front_rotor_zone"
+        assert "exit_stator" in zones[0].nonRotating_patches
+
 
 # ---------------------------------------------------------------------------
 # Boundary conditions
@@ -269,6 +287,17 @@ class TestBoundaryConditions:
         text = write_boundary_condition_nut(cfg)
         assert "nutkWallFunction" in text
 
+    def test_custom_stage_names_are_in_wall_patch_pattern(self):
+        cfg = _make_cfd_config()
+        fan = _make_fan_config(n_rotors=1)
+        fan.stages[0].name = "front rotor"
+        fan.stages[1].name = "exit-stator"
+
+        text = write_boundary_condition_U(cfg, fan)
+
+        assert "front_rotor" in text
+        assert "exit_stator" in text
+
 
 # ---------------------------------------------------------------------------
 # controlDict
@@ -302,6 +331,20 @@ class TestDecomposeParDict:
         text = write_decompose_par_dict(8)
         assert "8" in text
         assert "scotch" in text
+
+
+class TestFunctionObjects:
+    def test_custom_stage_names_are_sanitized_for_force_objects(self):
+        fan = _make_fan_config(n_rotors=1)
+        fan.stages[0].name = "front rotor"
+        fan.stages[1].name = "exit-stator"
+
+        text = write_function_objects(fan)
+
+        assert "forces_front_rotor" in text
+        assert "patches         (front_rotor);" in text
+        assert "forces_exit_stator" in text
+        assert "patches         (exit_stator);" in text
 
 
 # ---------------------------------------------------------------------------
@@ -339,3 +382,22 @@ FOAM FATAL ERROR: Maximum number of iterations exceeded
 """
         result = _parse_solver_log(diverged_log, elapsed=1.0)
         assert result.diverged is True
+
+    def test_full_pipeline_fails_on_nonzero_solver_return_code(self, tmp_path, monkeypatch):
+        cfg = _make_cfd_config()
+        runner = OpenFoamRunner(tmp_path, cfg)
+
+        monkeypatch.setattr(runner, "run_block_mesh", lambda: True)
+        monkeypatch.setattr(runner, "run_surface_feature_extract", lambda: True)
+        monkeypatch.setattr(runner, "run_snappy_hex_mesh", lambda: True)
+        monkeypatch.setattr(runner, "run_check_mesh", lambda: CheckMeshResult(passed=True))
+        monkeypatch.setattr(
+            runner,
+            "run_solver",
+            lambda: SolverResult(return_code=127, log_text="Command not found"),
+        )
+
+        result = runner.run_full_pipeline()
+
+        assert result.success is False
+        assert "exit code 127" in result.error_message

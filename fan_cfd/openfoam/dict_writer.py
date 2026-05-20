@@ -10,8 +10,9 @@ the templates (``{{...}}``) are replaced by the case builder.
 
 from __future__ import annotations
 
-import math
 from typing import TYPE_CHECKING
+
+from fan_cfd.utils.names import openfoam_identifier
 
 if TYPE_CHECKING:
     from fan_cfd.config import CFDConfig, FanConfig, FluidConfig
@@ -178,6 +179,7 @@ def write_snappy_hex_mesh_dict(
     inside_x = 0.0
     inside_y = (fan.hub_radius_m + fan.tip_radius_m) / 2.0
     inside_z = -cs * 3
+    layer_patch_pattern = _wall_patch_pattern(fan)
 
     add_layers = "true" if n_layers > 0 else "false"
 
@@ -236,7 +238,7 @@ addLayersControls
     relativeSizes       true;
     layers
     {{
-        "(hub|duct|rotor|stator).*"
+        "{layer_patch_pattern}"
         {{
             nSurfaceLayers {n_layers};
         }}
@@ -496,16 +498,26 @@ def _compute_k(u: float, intensity: float) -> float:
     return 1.5 * (u * intensity) ** 2
 
 
-def _compute_omega(k: float, nu: float, D: float) -> float:
+def _compute_omega(k: float, nu: float, hydraulic_diameter: float) -> float:
     """Specific dissipation from k, viscosity, hydraulic diameter."""
     Cmu = 0.09
-    l = 0.07 * D  # mixing length approx
-    eps = Cmu ** 0.75 * k ** 1.5 / l
+    mixing_length = 0.07 * hydraulic_diameter
+    eps = Cmu ** 0.75 * k ** 1.5 / mixing_length
     return eps / (Cmu * k) if k > 0 else 1.0
 
 
-def write_boundary_condition_U(config: "CFDConfig") -> str:
+def _wall_patch_pattern(fan: "FanConfig | None" = None) -> str:
+    patches = ["hub", "duct", "hub_wall", "duct_wall", "rotor.*", "stator.*"]
+    if fan is not None:
+        patches.extend(openfoam_identifier(stage.name, "stage") for stage in fan.stages)
+
+    unique_patches = list(dict.fromkeys(patches))
+    return "(" + "|".join(unique_patches) + ")"
+
+
+def write_boundary_condition_U(config: "CFDConfig", fan: "FanConfig | None" = None) -> str:
     u_in = config.inlet.velocity_m_s
+    wall_patch_pattern = _wall_patch_pattern(fan)
     return write_foam_header("volVectorField", "U") + f"""
 dimensions      [0 1 -1 0 0 0 0];
 
@@ -529,7 +541,7 @@ boundaryField
         type            slip;
     }}
 
-    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
+    "{wall_patch_pattern}"
     {{
         type            noSlip;
     }}
@@ -539,44 +551,46 @@ boundaryField
 """
 
 
-def write_boundary_condition_p(config: "CFDConfig") -> str:
-    return write_foam_header("volScalarField", "p") + """
+def write_boundary_condition_p(config: "CFDConfig", fan: "FanConfig | None" = None) -> str:
+    wall_patch_pattern = _wall_patch_pattern(fan)
+    return write_foam_header("volScalarField", "p") + f"""
 dimensions      [0 2 -2 0 0 0 0];
 
 internalField   uniform 0;
 
 boundaryField
-{
+{{
     inlet
-    {
+    {{
         type            zeroGradient;
-    }
+    }}
 
     outlet
-    {
+    {{
         type            fixedValue;
         value           uniform 0;
-    }
+    }}
 
     sides
-    {
+    {{
         type            slip;
-    }
+    }}
 
-    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
-    {
+    "{wall_patch_pattern}"
+    {{
         type            zeroGradient;
-    }
-}
+    }}
+}}
 
 // ************************************************************************* //
 """
 
 
-def write_boundary_condition_k(config: "CFDConfig") -> str:
+def write_boundary_condition_k(config: "CFDConfig", fan: "FanConfig | None" = None) -> str:
     u = config.inlet.velocity_m_s
-    I = config.inlet.turbulence_intensity
-    k_val = _compute_k(u, I)
+    intensity = config.inlet.turbulence_intensity
+    k_val = _compute_k(u, intensity)
+    wall_patch_pattern = _wall_patch_pattern(fan)
     return write_foam_header("volScalarField", "k") + f"""
 dimensions      [0 2 -2 0 0 0 0];
 
@@ -587,7 +601,7 @@ boundaryField
     inlet
     {{
         type            turbulentIntensityKineticEnergyInlet;
-        intensity       {I:.4f};
+        intensity       {intensity:.4f};
         value           uniform {k_val:.6e};
     }}
 
@@ -601,7 +615,7 @@ boundaryField
         type            slip;
     }}
 
-    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
+    "{wall_patch_pattern}"
     {{
         type            kqRWallFunction;
         value           uniform {k_val:.6e};
@@ -612,13 +626,14 @@ boundaryField
 """
 
 
-def write_boundary_condition_omega(config: "CFDConfig") -> str:
+def write_boundary_condition_omega(config: "CFDConfig", fan: "FanConfig | None" = None) -> str:
     u = config.inlet.velocity_m_s
-    I = config.inlet.turbulence_intensity
-    D = config.inlet.hydraulic_diameter_m
+    intensity = config.inlet.turbulence_intensity
+    hydraulic_diameter = config.inlet.hydraulic_diameter_m
     nu = config.fluid.nu_m2_s
-    k_val = _compute_k(u, I)
-    omega_val = _compute_omega(k_val, nu, D)
+    k_val = _compute_k(u, intensity)
+    omega_val = _compute_omega(k_val, nu, hydraulic_diameter)
+    wall_patch_pattern = _wall_patch_pattern(fan)
     return write_foam_header("volScalarField", "omega") + f"""
 dimensions      [0 0 -1 0 0 0 0];
 
@@ -629,7 +644,7 @@ boundaryField
     inlet
     {{
         type            turbulentMixingLengthFrequencyInlet;
-        mixingLength    {0.07 * D:.6e};
+        mixingLength    {0.07 * hydraulic_diameter:.6e};
         value           uniform {omega_val:.6e};
     }}
 
@@ -643,7 +658,7 @@ boundaryField
         type            slip;
     }}
 
-    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
+    "{wall_patch_pattern}"
     {{
         type            omegaWallFunction;
         value           uniform {omega_val:.6e};
@@ -654,38 +669,39 @@ boundaryField
 """
 
 
-def write_boundary_condition_nut(config: "CFDConfig") -> str:
-    return write_foam_header("volScalarField", "nut") + """
+def write_boundary_condition_nut(config: "CFDConfig", fan: "FanConfig | None" = None) -> str:
+    wall_patch_pattern = _wall_patch_pattern(fan)
+    return write_foam_header("volScalarField", "nut") + f"""
 dimensions      [0 2 -1 0 0 0 0];
 
 internalField   uniform 0;
 
 boundaryField
-{
+{{
     inlet
-    {
+    {{
         type            calculated;
         value           uniform 0;
-    }
+    }}
 
     outlet
-    {
+    {{
         type            calculated;
         value           uniform 0;
-    }
+    }}
 
     sides
-    {
+    {{
         type            calculated;
         value           uniform 0;
-    }
+    }}
 
-    "(hub|duct|hub_wall|duct_wall|rotor.*|stator.*)"
-    {
+    "{wall_patch_pattern}"
+    {{
         type            nutkWallFunction;
         value           uniform 0;
-    }
-}
+    }}
+}}
 
 // ************************************************************************* //
 """
@@ -721,13 +737,14 @@ def write_function_objects(fan: "FanConfig") -> str:
 
     force_blocks: list[str] = []
     for stage in rotor_stages + stator_stages:
+        patch_name = openfoam_identifier(stage.name, "stage")
         force_blocks.append(
             f"""
-    forces_{stage.name}
+    forces_{patch_name}
     {{
         type            forces;
         libs            ("libforces.so");
-        patches         ({stage.name});
+        patches         ({patch_name});
         rho             rhoInf;
         rhoInf          1.225;
         CofR            (0 0 {stage.axial_position_m:.6f});

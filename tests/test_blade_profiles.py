@@ -4,8 +4,6 @@ tests/test_blade_profiles.py
 Tests for airfoil generation and radial profile interpolation.
 """
 
-import math
-
 import numpy as np
 import pytest
 
@@ -15,7 +13,6 @@ from fan_cfd.geometry.blade_profiles import (
     interpolate_profile,
     naca4digit,
     naca4digit_upper_lower,
-    resolve_inherited_profile,
 )
 
 
@@ -49,7 +46,6 @@ class TestNaca4Digit:
         # (after accounting for cosine spacing differences)
         # Check at x=0.5 approximately
         mid = len(upper) // 2
-        x_u = upper[mid, 0]
         y_u = upper[mid, 1]
         y_l = lower[mid, 1]
         assert abs(y_u + y_l) < abs(y_u) * 0.1  # approximately symmetric

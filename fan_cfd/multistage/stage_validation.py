@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from fan_cfd.utils.names import openfoam_identifier
+
 if TYPE_CHECKING:
     from fan_cfd.config import DuctConfig, FanConfig, StageConfig
 
@@ -44,6 +46,22 @@ def validate_stage_sequence(
         duplicates = [n for n in names if names.count(n) > 1]
         errors.append(f"Duplicate stage names: {list(set(duplicates))}")
 
+    openfoam_names = [openfoam_identifier(s.name, "stage") for s in stages]
+    if len(openfoam_names) != len(set(openfoam_names)):
+        duplicates = [n for n in openfoam_names if openfoam_names.count(n) > 1]
+        errors.append(
+            f"Duplicate OpenFOAM stage patch names after sanitization: {list(set(duplicates))}"
+        )
+
+    reserved_openfoam_names = {"hub", "duct", "all_rotors", "all_stators", "full_assembly"}
+    reserved = [
+        stage.name
+        for stage, patch_name in zip(stages, openfoam_names)
+        if patch_name in reserved_openfoam_names
+    ]
+    if reserved:
+        errors.append(f"Stage names map to reserved OpenFOAM patch names: {reserved}")
+
     # Sort by axial position for subsequent checks
     sorted_stages = sorted(stages, key=lambda s: s.axial_position_m)
 
@@ -64,7 +82,6 @@ def validate_stage_sequence(
         inner_r = duct.inner_radius_m
         for stage in stages:
             # Approximate chord extent ≈ max chord value
-            chord_tip = _estimate_tip_chord(stage)
             if tip_r > inner_r:
                 errors.append(
                     f"Stage '{stage.name}': tip radius {tip_r:.4f} m exceeds "
@@ -74,7 +91,6 @@ def validate_stage_sequence(
 
     # --- 5. Hub diameter < blade root radius ---
     for stage in stages:
-        root_chord = _estimate_root_chord(stage)
         if hub_r >= tip_r:
             errors.append(
                 f"Stage '{stage.name}': hub radius {hub_r:.4f} m >= tip radius {tip_r:.4f} m."

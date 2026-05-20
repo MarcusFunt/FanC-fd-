@@ -274,6 +274,16 @@ class TestFullAssembly:
         assert "rotor_1" in meshes
         assert "stator_2" in meshes
 
+    def test_custom_stage_names_are_used_as_sanitized_mesh_keys(self):
+        fan = _make_simple_fan(n_stages=2)
+        fan.stages[0].name = "front rotor"
+        fan.stages[1].name = "exit-stator"
+
+        meshes = generate_full_assembly(fan, fan.stages)
+
+        assert "front_rotor" in meshes
+        assert "exit_stator" in meshes
+
     def test_duct_present_when_configured(self):
         fan = FanConfig(
             name="ducted",

@@ -113,6 +113,16 @@ python scripts/optimize.py \
     --output-dir runs/optimization
 ```
 
+Included presets range from simple single-stage fans to multistage stacks. For
+an axial-compressor starting point inspired by Afshawn's jetengine mean-line
+example, use:
+
+```bash
+python scripts/generate_geometry.py \
+    --config configs/jetengine_inspired_axial_compressor.yaml \
+    --output-dir runs/jetengine_inspired/geometry
+```
+
 After `run_case.py` completes, results are written to `runs/<fan_name>/results/results.json`.
 
 ---

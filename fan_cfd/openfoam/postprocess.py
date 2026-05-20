@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 
 from fan_cfd.utils.logging_utils import get_logger
+from fan_cfd.utils.names import openfoam_identifier
 
 if TYPE_CHECKING:
     from fan_cfd.config import FanConfig
@@ -293,7 +294,7 @@ class PostProcessor:
 
     def _read_stage_torque(self, stage_name: str) -> float:
         """Extract Mz (torque around axis) for a stage from forces function object."""
-        func_name = f"forces_{stage_name}"
+        func_name = f"forces_{openfoam_identifier(stage_name, 'stage')}"
         if not self._pp_dir.exists():
             return float("nan")
 

@@ -14,6 +14,7 @@ import trimesh
 
 from fan_cfd.geometry.stage_geometry import generate_stage_geometry
 from fan_cfd.utils.logging_utils import get_logger
+from fan_cfd.utils.names import openfoam_identifier
 
 if TYPE_CHECKING:
     from fan_cfd.config import FanConfig, StageConfig
@@ -138,8 +139,7 @@ def generate_full_assembly(
     all_rotor_blades: list[trimesh.Trimesh] = []
     all_stator_blades: list[trimesh.Trimesh] = []
     assembly_parts: list[trimesh.Trimesh] = []
-    rotor_idx = 0
-    stator_idx = 0
+    reserved_component_names = {"hub", "duct", "all_rotors", "all_stators", "full_assembly"}
 
     for stage in stages:
         blades = generate_stage_geometry(stage, fan)
@@ -148,13 +148,16 @@ def generate_full_assembly(
         from fan_cfd.config import StageType
 
         if stage.type == StageType.ROTOR:
-            rotor_idx += 1
-            key = f"rotor_{rotor_idx}"
+            key = openfoam_identifier(stage.name, "stage")
             all_rotor_blades.extend(blades)
         else:
-            stator_idx += 1
-            key = f"stator_{stator_idx}"
+            key = openfoam_identifier(stage.name, "stage")
             all_stator_blades.extend(blades)
+
+        if key in reserved_component_names or key in meshes:
+            raise ValueError(
+                f"Stage name '{stage.name}' maps to duplicate or reserved OpenFOAM patch '{key}'"
+            )
 
         meshes[key] = blade_mesh
         assembly_parts.append(blade_mesh)

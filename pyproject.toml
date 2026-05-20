@@ -28,6 +28,8 @@ dependencies = [
     "pyyaml>=6.0",
     "pandas>=2.0",
     "matplotlib>=3.7",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
 ]
 
 [project.optional-dependencies]
@@ -52,6 +54,10 @@ include = ["fan_cfd*", "scripts*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore:invalid value encountered in divide:RuntimeWarning:trimesh.triangles",
+]
 
 [tool.ruff]
 line-length = 100

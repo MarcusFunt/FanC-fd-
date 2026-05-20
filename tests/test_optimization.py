@@ -5,12 +5,9 @@ Tests for the optimization objective, scoring, and optimizer infrastructure.
 """
 
 import csv
-import json
 import math
 import tempfile
 from pathlib import Path
-
-import pytest
 
 from fan_cfd.config import ObjectiveConfig
 from fan_cfd.openfoam.postprocess import (
@@ -177,7 +174,6 @@ class TestLeaderboard:
             BladeConfig,
             FanCFDConfig,
             FanConfig,
-            ObjectiveConfig,
             Profile,
             StageConfig,
             StageType,

@@ -14,6 +14,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from fan_cfd.utils.names import openfoam_identifier
+
 if TYPE_CHECKING:
     from fan_cfd.config import FanConfig, StageConfig
     from fan_cfd.openfoam.mrf_zones import MRFZone
@@ -139,6 +141,6 @@ def _mrf_zone_axial_bounds(zone: "MRFZone", fan: "FanConfig") -> tuple[float, fl
 def _stage_for_zone(zone: "MRFZone", stages: "list[StageConfig]") -> "StageConfig | None":
     expected_cell_zone = zone.cell_zone
     for stage in stages:
-        if expected_cell_zone == f"{stage.name}_zone":
+        if expected_cell_zone == f"{openfoam_identifier(stage.name, 'stage')}_zone":
             return stage
     return None
