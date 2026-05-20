@@ -159,7 +159,7 @@ a {
 }
 
 .config-workspace {
-  grid-template-columns: minmax(220px, 270px) minmax(0, 1fr) minmax(260px, 320px);
+  grid-template-columns: minmax(210px, 240px) minmax(520px, 1fr) minmax(240px, 300px);
 }
 
 .runs-workspace {
@@ -236,6 +236,20 @@ a {
   gap: 8px;
 }
 
+.config-workspace .page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.config-workspace .page-header h1 {
+  max-width: 12ch;
+}
+
+.config-workspace .header-actions {
+  justify-content: flex-start;
+}
+
 .button,
 .icon-button {
   display: inline-flex;
@@ -286,6 +300,18 @@ a {
   opacity: 0.5;
 }
 
+.button:focus-visible,
+.icon-button:focus-visible,
+.side-nav a:focus-visible,
+.editor-tabs > button:focus-visible,
+.segmented button:focus-visible,
+.viewer-mode button:focus-visible,
+.config-row:focus-visible,
+.job-card:focus-visible {
+  outline: 3px solid rgba(15, 143, 138, 0.2);
+  outline-offset: 2px;
+}
+
 .icon-button {
   width: 34px;
   height: 34px;
@@ -296,7 +322,7 @@ a {
 .job-list,
 .stl-checks {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   padding: 10px;
 }
 
@@ -312,6 +338,10 @@ a {
   border-radius: 8px;
   padding: 10px;
   text-align: left;
+}
+
+.config-row {
+  padding: 11px 10px 11px 12px;
 }
 
 .config-row:hover,
@@ -337,6 +367,27 @@ a {
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.config-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.config-row .icon-button.danger {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.config-row:hover .icon-button.danger,
+.config-row:focus-within .icon-button.danger,
+.config-row.selected .icon-button.danger {
+  opacity: 1;
 }
 
 .editor-panel {
@@ -373,6 +424,18 @@ a {
   color: #0b5f5d;
   border-color: #b8dad5;
   background: var(--teal-2);
+}
+
+.editor-tabs > button.button.compact {
+  margin-left: auto;
+  border-color: var(--line);
+  background: #ffffff;
+  color: #27364a;
+}
+
+.editor-tabs > button.button.compact:hover {
+  border-color: #b8dad5;
+  background: #f0faf8;
 }
 
 .editor-content {
@@ -659,10 +722,14 @@ a {
 }
 
 .validation-panel {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  gap: 8px;
   padding: 16px;
   color: #405166;
+}
+
+.validation-panel.idle {
+  background: #fbfcfc;
 }
 
 .validation-panel.valid {
@@ -671,7 +738,6 @@ a {
 }
 
 .validation-panel.invalid {
-  display: grid;
   color: var(--red);
   background: #fff7ed;
 }
@@ -680,7 +746,16 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--ink);
   font-weight: 800;
+}
+
+.validation-panel.valid .validation-heading {
+  color: var(--green);
+}
+
+.validation-panel.invalid .validation-heading {
+  color: var(--red);
 }
 
 .validation-list {
@@ -1213,6 +1288,12 @@ th {
   }
 }
 
+@media (hover: none) {
+  .config-row .icon-button.danger {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 1220px) {
   .config-workspace,
   .runs-workspace,
@@ -1263,6 +1344,16 @@ th {
 
   .main-surface {
     padding: 12px;
+  }
+
+  .config-sidebar {
+    max-height: 286px;
+  }
+
+  .config-sidebar .config-list {
+    max-height: 212px;
+    overflow: auto;
+    overscroll-behavior: contain;
   }
 
   .field-grid.two,

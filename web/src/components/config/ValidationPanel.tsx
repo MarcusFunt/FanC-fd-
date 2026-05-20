@@ -9,8 +9,11 @@ export default function ValidationPanel({ validation }: ValidationPanelProps) {
   if (!validation) {
     return (
       <aside className="validation-panel idle">
-        <CheckCircle2 size={18} />
-        <span>Validation has not run yet.</span>
+        <div className="validation-heading">
+          <CheckCircle2 size={18} />
+          <strong>Readiness</strong>
+        </div>
+        <span>Auto-validation will run as the configuration changes.</span>
       </aside>
     );
   }
@@ -18,7 +21,10 @@ export default function ValidationPanel({ validation }: ValidationPanelProps) {
   if (validation.valid) {
     return (
       <aside className="validation-panel valid">
-        <CheckCircle2 size={18} />
+        <div className="validation-heading">
+          <CheckCircle2 size={18} />
+          <strong>Ready to launch</strong>
+        </div>
         <span>Config validates against FanCFDConfig.</span>
       </aside>
     );
@@ -28,7 +34,7 @@ export default function ValidationPanel({ validation }: ValidationPanelProps) {
     <aside className="validation-panel invalid">
       <div className="validation-heading">
         <AlertTriangle size={18} />
-        <span>{validation.errors.length} validation issue(s)</span>
+        <strong>{validation.errors.length} validation issue(s)</strong>
       </div>
       <div className="validation-list">
         {validation.errors.map((error, index) => (
@@ -41,4 +47,3 @@ export default function ValidationPanel({ validation }: ValidationPanelProps) {
     </aside>
   );
 }
-
